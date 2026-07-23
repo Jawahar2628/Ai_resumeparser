@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Search, Filter, Download, Eye, FileText, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-export default function Database() {
+export default function CandidateDatabase() {
   const navigate = useNavigate();
   const [candidates, setCandidates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);

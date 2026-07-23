@@ -2,7 +2,7 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { Sidebar } from "./components/Sidebar";
 import Dashboard from "./pages/Dashboard";
 import Upload from "./pages/Upload";
-import Database from "./pages/Database";
+import CandidateDatabase from "./pages/CandidateDatabase";
 import Evaluation from "./pages/Evaluation";
 import JDMatch from "./pages/JDMatch";
 import InterviewManagement from "./pages/InterviewManagement";
@@ -21,7 +21,7 @@ export default function App() {
             <Routes>
               <Route path="/" element={<Dashboard />} />
               <Route path="/upload" element={<Upload />} />
-              <Route path="/database" element={<Database />} />
+              <Route path="/database" element={<CandidateDatabase />} />
               <Route path="/evaluation" element={<Evaluation />} />
               <Route path="/evaluation/:id" element={<Evaluation />} />
               <Route path="/jd-match" element={<JDMatch />} />
