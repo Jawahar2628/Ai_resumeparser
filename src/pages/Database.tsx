@@ -12,7 +12,7 @@ export default function Database() {
   const mockCandidates = [
     {
       id: "CND1001",
-      name: "Arun Kumar",
+      name: "Vijay",
       role: "Senior Java Developer",
       experience: "8.2 Yrs",
       match: "92%",

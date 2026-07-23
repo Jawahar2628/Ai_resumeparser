@@ -50,11 +50,11 @@ export default function ClientFeedback() {
         <div className="bg-[#030514] p-6 rounded-2xl border border-slate-800 shadow-sm flex items-center gap-4">
           <img
             src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80"
-            alt="Arun Kumar"
+            alt="Vijay"
             className="w-14 h-14 rounded-full object-cover border-2 border-slate-700 flex-shrink-0 shadow-sm"
           />
           <div className="space-y-1">
-            <h2 className="text-base font-extrabold text-slate-100">Arun Kumar</h2>
+            <h2 className="text-base font-extrabold text-slate-100">Vijay</h2>
             <p className="text-xs text-slate-400 font-medium">Senior Java Developer</p>
             <span className="inline-block bg-emerald-950/60 border border-emerald-800/50 text-emerald-400 text-[10px] font-bold px-2 py-0.5 rounded-full">
               Shortlisted

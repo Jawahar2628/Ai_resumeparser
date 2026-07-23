@@ -62,11 +62,11 @@ export default function InterviewDashboard() {
           <div className="flex items-center gap-4 border-b border-slate-800 pb-6">
             <img
               src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80"
-              alt="Arun Kumar"
+              alt="Vijay"
               className="w-14 h-14 rounded-full object-cover border-2 border-slate-700 shadow-sm"
             />
             <div className="space-y-1">
-              <h2 className="text-base font-extrabold text-slate-100">Arun Kumar</h2>
+              <h2 className="text-base font-extrabold text-slate-100">Vijay</h2>
               <p className="text-xs text-slate-400 font-medium">Senior Java Developer</p>
               <span className="inline-block bg-emerald-950/60 border border-emerald-800/50 text-emerald-400 text-[10px] font-bold px-2 py-0.5 rounded-full">
                 Shortlisted
@@ -83,8 +83,8 @@ export default function InterviewDashboard() {
                   key={round.title}
                   onClick={() => setSelectedRound(round.title)}
                   className={`p-3.5 rounded-xl border transition-all cursor-pointer flex items-start gap-3.5 ${isSelected
-                      ? "bg-blue-950/40 border-blue-600 text-blue-400 shadow-sm"
-                      : "bg-[#030514] border-slate-800/80 text-slate-400 hover:border-slate-700 hover:bg-slate-900/40"
+                    ? "bg-blue-950/40 border-blue-600 text-blue-400 shadow-sm"
+                    : "bg-[#030514] border-slate-800/80 text-slate-400 hover:border-slate-700 hover:bg-slate-900/40"
                     }`}
                 >
                   <div className={`p-2 rounded-lg ${isSelected ? "bg-blue-600 text-white" : "bg-slate-900 border border-slate-800 text-slate-400"}`}>

@@ -34,7 +34,7 @@ export default function Dashboard() {
   ];
 
   const upcomingInterviews = [
-    { time: "10:00 AM", role: "Java Developer - Technical", candidate: "Arun Kumar" },
+    { time: "10:00 AM", role: "Java Developer - Technical", candidate: "Vijay" },
     { time: "11:30 AM", role: "Project Interview", candidate: "Priya S" },
     { time: "02:00 PM", role: "HR Interview", candidate: "Vikram M" },
   ];
@@ -45,9 +45,9 @@ export default function Dashboard() {
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
         <div className="relative w-full sm:w-80">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-          <input 
-            type="text" 
-            placeholder="Search anything..." 
+          <input
+            type="text"
+            placeholder="Search anything..."
             className="w-full pl-10 pr-4 py-2 bg-[#030514] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 text-slate-200 placeholder-slate-400 border border-slate-800"
           />
         </div>
@@ -59,11 +59,11 @@ export default function Dashboard() {
           <button className="p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-900 rounded-lg transition-colors border border-slate-800">
             <Settings size={20} />
           </button>
-          
+
           <div className="flex items-center gap-3 pl-2 border-l border-slate-800">
-            <img 
-              src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" 
-              alt="Senthil C" 
+            <img
+              src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"
+              alt="Senthil C"
               className="w-9 h-9 rounded-full object-cover border border-slate-700"
             />
             <div className="text-left leading-tight hidden sm:block">

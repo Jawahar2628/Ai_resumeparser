@@ -15,7 +15,7 @@ export default function InterviewManagement() {
 
   const interviewData = [
     {
-      candidate: "Arun Kumar",
+      candidate: "Vijay",
       role: "Senior Java Developer",
       type: "Technical",
       dateTime: "20 May, 10:00 AM",
