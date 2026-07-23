@@ -1,5 +1,6 @@
 import os
-from typing import TypedDict, Dict, Any
+from typing import Dict, Any
+from typing_extensions import TypedDict
 from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_community.document_loaders import PyPDFLoader

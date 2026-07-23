@@ -1,3 +1,7 @@
+import typing
+import typing_extensions
+typing.TypedDict = typing_extensions.TypedDict
+
 import os
 import shutil
 from fastapi import FastAPI, UploadFile, File, Depends, HTTPException, BackgroundTasks
