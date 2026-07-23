@@ -5,6 +5,10 @@ import Upload from "./pages/Upload";
 import Database from "./pages/Database";
 import Evaluation from "./pages/Evaluation";
 import JDMatch from "./pages/JDMatch";
+import InterviewManagement from "./pages/InterviewManagement";
+import InterviewDashboard from "./pages/InterviewDashboard";
+import ClientFeedback from "./pages/ClientFeedback";
+import AnalyticsReports from "./pages/AnalyticsReports";
 
 export default function App() {
   return (
@@ -21,6 +25,10 @@ export default function App() {
               <Route path="/evaluation" element={<Evaluation />} />
               <Route path="/evaluation/:id" element={<Evaluation />} />
               <Route path="/jd-match" element={<JDMatch />} />
+              <Route path="/interviews" element={<InterviewManagement />} />
+              <Route path="/interview-dashboard" element={<InterviewDashboard />} />
+              <Route path="/client-feedback" element={<ClientFeedback />} />
+              <Route path="/analytics" element={<AnalyticsReports />} />
             </Routes>
           </div>
         </main>

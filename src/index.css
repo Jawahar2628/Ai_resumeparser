@@ -32,4 +32,20 @@
   .glass-card {
     @apply bg-slate-800/40 backdrop-blur-lg border border-slate-700/50 rounded-2xl shadow-2xl;
   }
+  .clip-funnel-1 {
+    clip-path: polygon(0 0, 100% 0, 91% 100%, 9% 100%);
+  }
+  .clip-funnel-2 {
+    clip-path: polygon(0 0, 100% 0, 89% 100%, 11% 100%);
+  }
+  .clip-funnel-3 {
+    clip-path: polygon(0 0, 100% 0, 86% 100%, 14% 100%);
+  }
+  .clip-funnel-4 {
+    clip-path: polygon(0 0, 100% 0, 80% 100%, 20% 100%);
+  }
+  .clip-funnel-5 {
+    clip-path: polygon(0 0, 100% 0, 70% 100%, 30% 100%);
+  }
 }
+

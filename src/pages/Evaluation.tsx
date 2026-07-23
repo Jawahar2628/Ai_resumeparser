@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
-import { Star, Shield, TrendingUp, AlertCircle, BookOpen, CheckCircle, Briefcase, GraduationCap, FolderGit2, Mail, Phone, MapPin, Link } from "lucide-react";
-import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from "recharts";
+import { useParams, useNavigate } from "react-router-dom";
+import { ArrowLeft, Bell, Settings, Mail, Phone, MapPin, ChevronDown, CheckCircle2 } from "lucide-react";
 
 export default function Evaluation() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [candidate, setCandidate] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("Summary");
 
   useEffect(() => {
     if (id) {
@@ -21,291 +22,378 @@ export default function Evaluation() {
           setLoading(false);
         });
     } else {
+      // Mock data for display when no specific ID is provided
+      setCandidate({
+        full_name: "Vijay",
+        status: "Shortlisted",
+        email: "vijay@gmail.com",
+        phone: "+91 98456 78901",
+        location: "Chennai, India",
+        linkedin: "linkedin.com/in/vijaykumar",
+        github: "github.com/vijaykumar",
+        ai_score: 86,
+        score_label: "Very Good Candidate",
+        total_experience: "8.2 Years",
+        relevant_experience: "7.5 Years",
+        current_ctc: "12 LPA",
+        expected_ctc: "18 LPA",
+        notice_period: "30 Days",
+        summary: "8+ years of experience in Java development with strong expertise in Spring Boot, Microservices, REST APIs and Cloud technologies. Proven track record in designing and delivering scalable enterprise applications.",
+        skills: ["Java", "Spring Boot", "Microservices", "REST API", "SQL", "AWS", "Kafka", "Docker", "Jenkins", "Git"],
+        experiences: [
+          { role: "Senior Java Developer", company: "TechCorp Solutions", duration: "2021 - Present", desc: "Led microservices architecture redesign, improving system throughput by 40%." },
+          { role: "Java Software Engineer", company: "DataSoft Inc.", duration: "2018 - 2021", desc: "Developed RESTful web services using Spring Boot and Hibernate." }
+        ],
+        education: [
+          { degree: "B.Tech in Computer Science", institution: "Anna University", year: "2014 - 2018" }
+        ],
+        projects: [
+          { name: "E-Commerce Payment Gateway", desc: "Integrated multi-vendor payment solution processing 1M+ daily transactions." }
+        ],
+        certifications: ["AWS Certified Solutions Architect", "Oracle Certified Professional Java SE 11"],
+        analysis: {
+          strengths: ["Strong backend architecture knowledge", "Extensive experience with distributed messaging (Kafka)", "Clean code enthusiast"],
+          gaps: ["Limited frontend framework experience"]
+        }
+      });
       setLoading(false);
     }
   }, [id]);
 
   if (loading) {
-    return <div className="text-white p-8">Loading AI Evaluation...</div>;
-  }
-  
-  if (!candidate || !candidate.evaluation) {
-    return <div className="text-white p-8">Evaluation not found.</div>;
+    return <div className="text-white p-8 bg-[#030514] min-h-screen">Loading Candidate Profile...</div>;
   }
 
-  const evalData = candidate.evaluation;
-  const parsed = candidate.parsed_resume;
-  const techScore = evalData.ai_technical_score || 0;
-  const personality = evalData.personality_analysis || {};
-  const career = evalData.career_analysis || {};
+  const navTabs = ["Summary", "Experience", "Education", "Skills", "Projects", "Certifications", "Analysis", "Documents"];
 
-  const technicalData = [
-    { subject: 'Overall', A: techScore, fullMark: 100 }
-  ];
-  
-  evalData.skill_strengths?.slice(0, 4).forEach((skill: string) => {
-    technicalData.push({ subject: skill, A: Math.max(techScore, 85), fullMark: 100 });
-  });
-  evalData.skill_weaknesses?.slice(0, 3).forEach((skill: string) => {
-    technicalData.push({ subject: skill, A: 40, fullMark: 100 });
-  });
+  const parsed = candidate?.parsed_resume || {};
+  const evalData = candidate?.evaluation || {};
 
-  const personalityData = [
-    { subject: 'Leadership', A: personality.leadership || 0, fullMark: 100 },
-    { subject: 'Team Player', A: personality.team_player || 0, fullMark: 100 },
-    { subject: 'Communication', A: personality.communication || 0, fullMark: 100 },
-    { subject: 'Problem Solving', A: personality.problem_solving || 0, fullMark: 100 },
-  ];
+  const name = candidate?.full_name || parsed.name || "Vijay Kumar";
+  const status = candidate?.status || "Shortlisted";
+  const email = candidate?.email || parsed.email || "vijay@gmail.com";
+  const phone = candidate?.phone || parsed.phone || "+91 98456 78901";
+  const location = candidate?.location || parsed.location || "Chennai, India";
+  const linkedin = candidate?.linkedin || parsed.linkedin || "linkedin.com/in/vijaykumar";
+  const github = candidate?.github || parsed.github || "github.com/vijaykumar";
+  const aiScore = candidate?.ai_score || evalData.ai_technical_score || 86;
+  const scoreLabel = candidate?.score_label || (aiScore >= 80 ? "Very Good Candidate" : "Good Candidate");
+
+  const totalExp = candidate?.total_experience || (parsed.years_of_experience ? `${parsed.years_of_experience} Years` : "8.2 Years");
+  const relExp = candidate?.relevant_experience || "7.5 Years";
+  const currCtc = candidate?.current_ctc || "12 LPA";
+  const expCtc = candidate?.expected_ctc || "18 LPA";
+  const noticePeriod = candidate?.notice_period || "30 Days";
+
+  const summaryText = candidate?.summary || parsed.summary || "8+ years of experience in Java development with strong expertise in Spring Boot, Microservices, REST APIs and Cloud technologies. Proven track record in designing and delivering scalable enterprise applications.";
+  const skillsList = candidate?.skills || parsed.skills || ["Java", "Spring Boot", "Microservices", "REST API", "SQL", "AWS", "Kafka", "Docker", "Jenkins", "Git"];
 
   return (
-    <div className="space-y-8 pb-10">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">AI Candidate Evaluation</h1>
-          <p className="text-slate-400">Deep analysis of {candidate.full_name}'s profile and capabilities.</p>
+    <div className="bg-[#030514] text-slate-100 min-h-screen p-6 rounded-2xl space-y-6 font-sans">
+      {/* Top Bar Header */}
+      <div className="flex justify-between items-center">
+        <div className="flex items-center gap-3">
+          <h1 className="text-xl font-bold text-slate-100">Candidate Profile</h1>
         </div>
-        
-        {/* Contact Info */}
-        <div className="flex flex-wrap gap-4 text-sm text-slate-300">
-          {parsed.email && (
-            <div className="flex items-center gap-1">
-              <Mail size={16} className="text-indigo-400" />
-              <span>{parsed.email}</span>
-            </div>
-          )}
-          {parsed.phone && (
-            <div className="flex items-center gap-1">
-              <Phone size={16} className="text-indigo-400" />
-              <span>{parsed.phone}</span>
-            </div>
-          )}
-          {parsed.location && (
-            <div className="flex items-center gap-1">
-              <MapPin size={16} className="text-indigo-400" />
-              <span>{parsed.location}</span>
-            </div>
-          )}
-          {parsed.linkedin && (
-            <div className="flex items-center gap-1">
-              <Link size={16} className="text-indigo-400" />
-              <span>{parsed.linkedin}</span>
-            </div>
-          )}
+
+        <div className="flex items-center gap-3">
+          <button className="p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-900 rounded-lg transition-colors border border-slate-800">
+            <Bell size={18} />
+          </button>
+          <button className="p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-900 rounded-lg transition-colors border border-slate-800">
+            <Settings size={18} />
+          </button>
         </div>
       </div>
 
-      {/* Top Overview Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="glass-card p-6 flex items-center gap-4 border-l-4 border-indigo-500">
-          <div className="w-12 h-12 bg-indigo-500/20 rounded-full flex items-center justify-center text-indigo-400">
-            <Star size={24} />
-          </div>
-          <div>
-            <p className="text-sm text-slate-400">Experience Level</p>
-            <h3 className="text-xl font-bold text-slate-100">{candidate.experience_level}</h3>
-          </div>
-        </div>
-        
-        <div className="glass-card p-6 flex items-center gap-4 border-l-4 border-sky-500">
-          <div className="w-12 h-12 bg-sky-500/20 rounded-full flex items-center justify-center text-sky-400">
-            <Shield size={24} />
-          </div>
-          <div>
-            <p className="text-sm text-slate-400">Domain Expertise</p>
-            <h3 className="text-xl font-bold text-slate-100 truncate w-40" title={evalData.domain_expertise?.join(", ")}>
-              {evalData.domain_expertise?.[0] || 'Unknown'}
-            </h3>
-          </div>
-        </div>
-        
-        <div className="glass-card p-6 flex items-center gap-4 border-l-4 border-green-500">
-          <div className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center text-green-400">
-            <TrendingUp size={24} />
-          </div>
-          <div>
-            <p className="text-sm text-slate-400">Overall AI Score</p>
-            <h3 className="text-xl font-bold text-slate-100">{techScore}%</h3>
-          </div>
+      {/* Action Buttons Row */}
+      <div className="flex justify-between items-center">
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-1.5 bg-[#030514] border border-slate-800 text-slate-300 px-4 py-1.5 rounded-xl text-xs font-bold hover:bg-slate-900 transition-colors shadow-sm"
+        >
+          <ArrowLeft size={14} />
+          Back
+        </button>
+
+        <div className="flex items-center gap-3">
+          <button className="bg-[#030514] border border-blue-500 text-blue-400 px-4 py-1.5 rounded-xl text-xs font-bold hover:bg-blue-950/30 transition-colors shadow-sm">
+            Edit Profile
+          </button>
+          <button className="flex items-center gap-1.5 bg-[#030514] border border-slate-800 text-slate-300 px-4 py-1.5 rounded-xl text-xs font-bold hover:bg-slate-900 transition-colors shadow-sm">
+            Actions
+            <ChevronDown size={14} />
+          </button>
         </div>
       </div>
 
-      {/* Radar Charts Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="glass-card p-6">
-          <h3 className="text-lg font-bold mb-6 text-slate-200">Technical Strength</h3>
-          <div className="h-72 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <RadarChart cx="50%" cy="50%" outerRadius="75%" data={technicalData}>
-                <PolarGrid stroke="#334155" />
-                <PolarAngleAxis dataKey="subject" tick={{ fill: '#94a3b8', fontSize: 12 }} />
-                <PolarRadiusAxis angle={30} domain={[0, 100]} stroke="#334155" />
-                <Radar name="Tech" dataKey="A" stroke="#6366f1" fill="#6366f1" fillOpacity={0.4} />
-              </RadarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
+      {/* Profile Overview Header Card & Score Card */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Profile Card (2 cols) */}
+        <div className="lg:col-span-2 bg-[#030514] p-6 rounded-2xl border border-slate-800 shadow-sm flex flex-col sm:flex-row items-center gap-6">
+          <img
+            src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80"
+            alt={name}
+            className="w-24 h-24 rounded-full object-cover border-2 border-slate-700 flex-shrink-0 shadow-sm"
+          />
 
-        <div className="glass-card p-6">
-          <h3 className="text-lg font-bold mb-6 text-slate-200">AI Personality Analysis</h3>
-          <div className="h-72 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <RadarChart cx="50%" cy="50%" outerRadius="75%" data={personalityData}>
-                <PolarGrid stroke="#334155" />
-                <PolarAngleAxis dataKey="subject" tick={{ fill: '#94a3b8', fontSize: 12 }} />
-                <PolarRadiusAxis angle={30} domain={[0, 100]} stroke="#334155" />
-                <Radar name="Personality" dataKey="A" stroke="#38bdf8" fill="#38bdf8" fillOpacity={0.4} />
-              </RadarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
+          <div className="space-y-3 text-center sm:text-left flex-1">
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3">
+              <h2 className="text-xl font-extrabold text-slate-100">{name}</h2>
+              <span className="bg-emerald-950/60 border border-emerald-800/50 text-emerald-400 text-[11px] font-bold px-2.5 py-0.5 rounded-full">
+                {status}
+              </span>
+            </div>
 
-      {/* Career Analysis & Recommendations */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="glass-card p-6 border border-slate-700/50 relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-4 opacity-10">
-            <TrendingUp size={100} />
-          </div>
-          <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-            <TrendingUp className="text-indigo-400" size={20} />
-            Career Analysis
-          </h3>
-          <div className="space-y-4 relative z-10">
-            <div className="flex justify-between items-center bg-slate-900/50 p-3 rounded-lg">
-              <span className="text-slate-400">Job Hopping Risk</span>
-              <span className="text-slate-200 font-medium">{career.job_hopping_risk || 'Unknown'}</span>
-            </div>
-            <div className="flex justify-between items-center bg-slate-900/50 p-3 rounded-lg">
-              <span className="text-slate-400">Career Stability</span>
-              <span className="text-slate-200 font-medium">{career.career_stability || 'Unknown'}</span>
-            </div>
-            <div className="flex justify-between items-center bg-slate-900/50 p-3 rounded-lg">
-              <span className="text-slate-400">Promotion Pattern</span>
-              <span className="text-slate-200 font-medium">{career.promotion_pattern || 'Unknown'}</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="glass-card p-6 border border-slate-700/50 relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-4 opacity-10">
-            <BookOpen size={100} />
-          </div>
-          <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-            <BookOpen className="text-sky-400" size={20} />
-            Skill Intelligence
-          </h3>
-          
-          <div className="space-y-4 relative z-10">
-            <div>
-              <h4 className="text-sm font-semibold text-slate-500 mb-2">Strengths</h4>
-              <div className="flex flex-wrap gap-2">
-                {evalData.skill_strengths?.map((s: string) => (
-                  <span key={s} className="bg-indigo-500/20 text-indigo-300 px-2 py-1 rounded text-xs border border-indigo-500/20">{s}</span>
-                ))}
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-6 gap-y-2 text-xs text-slate-400">
+              <div className="flex items-center gap-1.5">
+                <Mail size={14} className="text-slate-400" />
+                <span>{email}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Phone size={14} className="text-slate-400" />
+                <span>{phone}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <MapPin size={14} className="text-slate-400" />
+                <span>{location}</span>
               </div>
             </div>
-            <div>
-              <h4 className="text-sm font-semibold text-slate-500 mb-2 flex items-center gap-1">
-                Weaknesses
-              </h4>
-              <div className="flex flex-wrap gap-2">
-                {evalData.skill_weaknesses?.map((s: string) => (
-                  <span key={s} className="bg-rose-500/20 text-rose-300 px-2 py-1 rounded text-xs border border-rose-500/20">{s}</span>
-                ))}
-              </div>
+
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-6 gap-y-2 text-xs">
+              <a href={`https://${linkedin}`} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-blue-400 font-semibold hover:underline">
+                <span className="bg-[#0a66c2] text-white w-3.5 h-3.5 rounded-xs flex items-center justify-center text-[9px] font-bold">in</span>
+                <span>{linkedin}</span>
+              </a>
+              <a href={`https://${github}`} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-blue-400 font-semibold hover:underline">
+                <svg className="w-3.5 h-3.5 fill-current text-slate-300" viewBox="0 0 24 24">
+                  <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
+                </svg>
+                <span>{github}</span>
+              </a>
             </div>
-            {career.recommended_upskilling && career.recommended_upskilling.length > 0 && (
-              <div className="mt-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg flex items-start gap-3">
-                <AlertCircle className="text-amber-400 shrink-0" size={18} />
-                <p className="text-sm text-amber-200/80">
-                  AI recommends upskilling in <strong className="text-amber-400">{career.recommended_upskilling.join(", ")}</strong> to improve career trajectory.
-                </p>
-              </div>
-            )}
+          </div>
+        </div>
+
+        {/* AI Profile Score Card (1 col) */}
+        <div className="bg-[#030514] p-6 rounded-2xl border border-slate-800 shadow-sm flex items-center justify-between">
+          <div className="space-y-3">
+            <h3 className="text-xs font-bold text-slate-100">AI Profile Score</h3>
+            <div className="flex items-baseline gap-1">
+              <span className="text-3xl font-extrabold text-slate-100">{aiScore}</span>
+              <span className="text-xs text-slate-400 font-semibold">/100</span>
+            </div>
+            <span className="text-xs font-bold text-emerald-400 block">{scoreLabel}</span>
+          </div>
+
+          {/* Gauge Ring Visual */}
+          <div className="relative w-20 h-20 flex items-center justify-center">
+            <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+              <path
+                className="text-slate-800"
+                strokeWidth="3.5"
+                stroke="currentColor"
+                fill="none"
+                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+              />
+              <path
+                className="text-emerald-500 stroke-current"
+                strokeWidth="3.5"
+                strokeDasharray={`${aiScore}, 100`}
+                strokeLinecap="round"
+                fill="none"
+                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+              />
+            </svg>
+            <div className="absolute text-slate-400">
+              <span className="text-xs">⨝</span>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Full Resume Details (Experience, Education, Projects) */}
-      <div className="space-y-8 mt-12">
-        <h2 className="text-2xl font-bold border-b border-slate-700 pb-4">Parsed Resume Details</h2>
+      {/* Metrics Row: Experience & CTC Cards */}
+      <div className="bg-[#030514] p-6 rounded-2xl border border-slate-800 shadow-sm grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-6 divide-x divide-slate-800">
+        <div className="space-y-1">
+          <span className="text-xs font-semibold text-slate-400">Total Experience</span>
+          <div className="text-base font-extrabold text-slate-100">{totalExp}</div>
+        </div>
 
-        {/* Experience */}
-        {parsed.experience && parsed.experience.length > 0 && (
-          <div className="glass-card p-6">
-            <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
-              <Briefcase className="text-indigo-400" size={24} />
-              Professional Experience
-            </h3>
-            <div className="space-y-6">
-              {parsed.experience.map((exp: any, i: number) => (
-                <div key={i} className="relative pl-6 border-l-2 border-indigo-500/30">
-                  <div className="absolute w-3 h-3 bg-indigo-500 rounded-full -left-[7px] top-1.5 ring-4 ring-[#0f172a]"></div>
-                  <h4 className="text-lg font-bold text-slate-200">{exp.designation}</h4>
-                  <div className="flex justify-between items-center text-sm mb-3">
-                    <span className="text-indigo-300 font-medium">{exp.company}</span>
-                    <span className="text-slate-400">{exp.duration}</span>
+        <div className="pl-6 space-y-1">
+          <span className="text-xs font-semibold text-slate-400">Relevant Experience</span>
+          <div className="text-base font-extrabold text-slate-100">{relExp}</div>
+        </div>
+
+        <div className="pl-6 space-y-1">
+          <span className="text-xs font-semibold text-slate-400">Current CTC</span>
+          <div className="text-base font-extrabold text-slate-100">{currCtc}</div>
+        </div>
+
+        <div className="pl-6 space-y-1">
+          <span className="text-xs font-semibold text-slate-400">Expected CTC</span>
+          <div className="text-base font-extrabold text-slate-100">{expCtc}</div>
+        </div>
+
+        <div className="pl-6 space-y-1">
+          <span className="text-xs font-semibold text-slate-400">Notice Period</span>
+          <div className="text-base font-extrabold text-slate-100">{noticePeriod}</div>
+        </div>
+      </div>
+
+      {/* Content Tabs Wrapper */}
+      <div className="bg-[#030514] rounded-2xl p-6 border border-slate-800 shadow-sm space-y-6">
+        {/* Navigation Tabs Header */}
+        <div className="flex items-center gap-6 border-b border-slate-800 pb-4 overflow-x-auto">
+          {navTabs.map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`text-xs font-bold transition-colors whitespace-nowrap relative pb-4 -mb-4 ${activeTab === tab ? "text-blue-400" : "text-slate-400 hover:text-slate-200"
+                }`}
+            >
+              {tab}
+              {activeTab === tab && (
+                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500 rounded-full"></span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* Tab Content Section */}
+        {activeTab === "Summary" && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Professional Summary */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-bold text-slate-100">Professional Summary</h3>
+              <p className="text-xs text-slate-300 leading-relaxed font-normal">
+                {summaryText}
+              </p>
+            </div>
+
+            {/* Top Skills Badges */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-bold text-slate-100">Top Skills</h3>
+              <div className="flex flex-wrap gap-2.5">
+                {skillsList.map((skill: string, i: number) => {
+                  const isHighlighted = skill === "Microservices";
+                  return (
+                    <span
+                      key={i}
+                      className={`text-xs font-semibold px-3.5 py-1.5 rounded-lg transition-colors ${isHighlighted
+                        ? "bg-blue-950/60 text-blue-400 border border-blue-800/60"
+                        : "bg-slate-900 text-slate-300 border border-slate-800 hover:bg-slate-800"
+                        }`}
+                    >
+                      {skill}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "Experience" && (
+          <div className="space-y-4">
+            <h3 className="text-sm font-bold text-slate-100">Work Experience</h3>
+            <div className="space-y-4">
+              {(candidate.experiences || []).map((exp: any, idx: number) => (
+                <div key={idx} className="p-4 rounded-xl border border-slate-800 bg-[#030514] space-y-1">
+                  <div className="flex justify-between items-center">
+                    <h4 className="text-xs font-bold text-slate-100">{exp.role} - <span className="text-blue-400">{exp.company}</span></h4>
+                    <span className="text-[11px] text-slate-400 font-medium">{exp.duration}</span>
                   </div>
-                  <p className="text-slate-400 text-sm leading-relaxed">{exp.responsibilities}</p>
+                  <p className="text-xs text-slate-300">{exp.desc}</p>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* Education & Projects */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Education */}
-          {parsed.education && parsed.education.length > 0 && (
-            <div className="glass-card p-6">
-              <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
-                <GraduationCap className="text-sky-400" size={24} />
-                Education
-              </h3>
-              <div className="space-y-4">
-                {parsed.education.map((edu: any, i: number) => (
-                  <div key={i} className="bg-slate-900/50 p-4 rounded-xl border border-slate-800">
-                    <h4 className="font-bold text-slate-200">{edu.degree}</h4>
-                    <p className="text-sky-300 text-sm my-1">{edu.institution}</p>
-                    <div className="flex justify-between text-xs text-slate-400 mt-2">
-                      <span>{edu.year_of_passing}</span>
-                      <span>Score: {edu.score}</span>
-                    </div>
-                  </div>
-                ))}
+        {activeTab === "Education" && (
+          <div className="space-y-4">
+            <h3 className="text-sm font-bold text-slate-100">Education Details</h3>
+            {(candidate.education || []).map((edu: any, idx: number) => (
+              <div key={idx} className="p-4 rounded-xl border border-slate-800 bg-[#030514] flex justify-between items-center text-xs">
+                <div>
+                  <h4 className="font-bold text-slate-100">{edu.degree}</h4>
+                  <p className="text-slate-400">{edu.institution}</p>
+                </div>
+                <span className="text-slate-400 font-medium">{edu.year}</span>
               </div>
-            </div>
-          )}
+            ))}
+          </div>
+        )}
 
-          {/* Projects */}
-          {parsed.projects && parsed.projects.length > 0 && (
-            <div className="glass-card p-6">
-              <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
-                <FolderGit2 className="text-green-400" size={24} />
-                Projects
-              </h3>
-              <div className="space-y-4">
-                {parsed.projects.map((proj: any, i: number) => (
-                  <div key={i} className="bg-slate-900/50 p-4 rounded-xl border border-slate-800">
-                    <div className="flex justify-between items-start mb-2">
-                      <h4 className="font-bold text-slate-200">{proj.name}</h4>
-                      <span className="text-xs bg-green-500/20 text-green-300 px-2 py-1 rounded">{proj.role}</span>
-                    </div>
-                    <p className="text-sm text-slate-400 mb-3">{proj.description}</p>
-                    <div className="flex flex-wrap gap-1">
-                      {proj.tech_stack?.map((tech: string) => (
-                        <span key={tech} className="text-[10px] uppercase tracking-wider bg-slate-800 text-slate-300 px-2 py-0.5 rounded border border-slate-700">
-                          {tech}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
+        {activeTab === "Skills" && (
+          <div className="space-y-4">
+            <h3 className="text-sm font-bold text-slate-100">Extracted Skills Matrix</h3>
+            <div className="flex flex-wrap gap-2">
+              {skillsList.map((skill: string, idx: number) => (
+                <span key={idx} className="bg-slate-900 border border-slate-800 text-slate-200 text-xs px-3 py-1.5 rounded-lg font-semibold">
+                  {skill}
+                </span>
+              ))}
             </div>
-          )}
-        </div>
+          </div>
+        )}
+
+        {activeTab === "Projects" && (
+          <div className="space-y-4">
+            <h3 className="text-sm font-bold text-slate-100">Key Projects</h3>
+            {(candidate.projects || []).map((proj: any, idx: number) => (
+              <div key={idx} className="p-4 rounded-xl border border-slate-800 bg-[#030514] space-y-1">
+                <h4 className="text-xs font-bold text-slate-100">{proj.name}</h4>
+                <p className="text-xs text-slate-300">{proj.desc}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {activeTab === "Certifications" && (
+          <div className="space-y-4">
+            <h3 className="text-sm font-bold text-slate-100">Certifications</h3>
+            <ul className="space-y-2 text-xs text-slate-300">
+              {(candidate.certifications || []).map((cert: string, idx: number) => (
+                <li key={idx} className="flex items-center gap-2">
+                  <CheckCircle2 size={14} className="text-emerald-400" />
+                  <span>{cert}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {activeTab === "Analysis" && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="p-4 rounded-xl bg-emerald-950/30 border border-emerald-800/40 space-y-2">
+              <h4 className="text-xs font-bold text-emerald-400">Strengths</h4>
+              <ul className="space-y-1 text-xs text-emerald-300">
+                {(candidate.analysis?.strengths || ["Backend Java expertise", "Microservices design"]).map((s: string, i: number) => (
+                  <li key={i}>• {s}</li>
+                ))}
+              </ul>
+            </div>
+            <div className="p-4 rounded-xl bg-amber-950/30 border border-amber-800/40 space-y-2">
+              <h4 className="text-xs font-bold text-amber-400">Growth Areas / Gaps</h4>
+              <ul className="space-y-1 text-xs text-amber-300">
+                {(candidate.analysis?.gaps || ["Frontend framework depth"]).map((g: string, i: number) => (
+                  <li key={i}>• {g}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "Documents" && (
+          <div className="space-y-4 text-xs text-slate-400">
+            <h3 className="text-sm font-bold text-slate-100">Uploaded Documents</h3>
+            <p>Original resume file available for preview or download.</p>
+          </div>
+        )}
       </div>
     </div>
   );
 }
+
+

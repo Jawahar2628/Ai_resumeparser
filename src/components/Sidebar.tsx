@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, UploadCloud, Users, CheckCircle, FileText, Settings, Briefcase } from "lucide-react";
+import { LayoutDashboard, UploadCloud, Users, CheckCircle, Settings, Briefcase, Calendar, Video, MessageSquare, BarChart3 } from "lucide-react";
 
 export function Sidebar() {
   const navItems = [
@@ -8,6 +8,10 @@ export function Sidebar() {
     { name: "Candidate Database", path: "/database", icon: <Users size={20} /> },
     { name: "Evaluation", path: "/evaluation", icon: <CheckCircle size={20} /> },
     { name: "JD Matching", path: "/jd-match", icon: <Briefcase size={20} /> },
+    { name: "Interviews", path: "/interviews", icon: <Calendar size={20} /> },
+    { name: "Interview Dashboard", path: "/interview-dashboard", icon: <Video size={20} /> },
+    { name: "Client Feedback", path: "/client-feedback", icon: <MessageSquare size={20} /> },
+    { name: "Analytics & Reports", path: "/analytics", icon: <BarChart3 size={20} /> },
   ];
 
   return (
@@ -19,7 +23,7 @@ export function Sidebar() {
         <p className="text-xs text-slate-400 mt-1">Smart Hiring Platform</p>
       </div>
 
-      <nav className="flex-1 px-4 space-y-2 mt-4">
+      <nav className="flex-1 px-4 space-y-2 mt-4 overflow-y-auto min-h-0">
         {navItems.map((item) => (
           <NavLink
             key={item.path}
