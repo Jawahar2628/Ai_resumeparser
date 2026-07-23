@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: resume_parser_backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=mongodb://mongodb:27017
+      - DATABASE_NAME=ai_resume_parser_db
+      - APP_ENV=production
+      - DEBUG=False
+      - HOST=0.0.0.0
+      - PORT=8000
+      - SECRET_KEY=production-super-secret-key-ai-resume-parser-2026
+      - DEFAULT_ADMIN_NAME=Administrator
+      - DEFAULT_ADMIN_EMAIL=admin@example.com
+      - DEFAULT_ADMIN_PASSWORD=Admin@123
+      - DEFAULT_ADMIN_ROLE=admin
+    depends_on:
+      - mongodb
+    volumes:
+      - ./app/uploads:/app/app/uploads
+      - ./app/logs:/app/app/logs
+    restart: always
+
+  mongodb:
+    image: mongo:7.0
+    container_name: resume_parser_mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    restart: always
+
+volumes:
+  mongodb_data:
