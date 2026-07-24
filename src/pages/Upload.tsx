@@ -88,12 +88,27 @@ export default function Upload() {
   };
 
   const pData = parsedResponse?.parsed_data || {};
-  const personal = pData.personal_information || {};
-  const exp = pData.experience || {};
+  const aiEval = parsedResponse?.ai_evaluation || {};
+
+  const personal = {
+    full_name: pData.full_name,
+    email: pData.email,
+    phone_number: pData.phone,
+    current_location: pData.location,
+    linkedin_url: pData.linkedin,
+    total_experience: pData.total_experience_years
+  };
+
+  const expList = Array.isArray(pData.experience) ? pData.experience : [];
   const eduList = Array.isArray(pData.education) ? pData.education : [];
   const certList = Array.isArray(pData.certifications) ? pData.certifications : [];
-  const skills = pData.skills || {};
   const projList = Array.isArray(pData.projects) ? pData.projects : [];
+  const skills = {
+    primary_skills: pData.primary_skills || [],
+    frameworks: pData.frameworks || [],
+    databases: pData.databases || [],
+    cloud_technologies: pData.cloud_tech || [],
+  };
 
   return (
     <div className="bg-[#030514] text-slate-100 min-h-screen p-6 rounded-2xl space-y-6 font-sans relative">
@@ -329,6 +344,7 @@ export default function Upload() {
                 { id: "certifications", label: "Certifications", icon: Award },
                 { id: "skills", label: "Skills", icon: Code },
                 { id: "projects", label: "Projects", icon: FolderGit2 },
+                { id: "evaluation", label: "AI Evaluation", icon: ExternalLink },
               ].map((tab) => {
                 const Icon = tab.icon;
                 return (
@@ -359,10 +375,8 @@ export default function Upload() {
                     <FieldBox label="Phone Number" value={personal.phone_number} />
                     <FieldBox label="Email" value={personal.email} />
                     <FieldBox label="Current Location" value={personal.current_location} />
-                    <FieldBox label="Nationality" value={personal.nationality} />
                     <FieldBox label="LinkedIn URL" value={personal.linkedin_url} isLink />
-                    <FieldBox label="GitHub URL" value={personal.github_url} isLink />
-                    <FieldBox label="Portfolio URL" value={personal.portfolio_url} isLink />
+                    <FieldBox label="Total Experience (Years)" value={personal.total_experience} />
                   </div>
                 </div>
               )}
@@ -371,29 +385,19 @@ export default function Upload() {
               {activeTab === "experience" && (
                 <div className="space-y-4">
                   <h4 className="text-sm font-bold text-blue-400 uppercase tracking-wider">Work Experience</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <FieldBox label="Total Experience" value={exp.total_experience} />
-                    <FieldBox label="Relevant Experience" value={exp.relevant_experience} />
-                    <FieldBox label="Current Company" value={exp.current_company} />
-                    <FieldBox label="Designation" value={exp.designation} />
-                    <FieldBox label="Joining Date" value={exp.joining_date} />
-                    <FieldBox label="Relieving Date" value={exp.relieving_date} />
-                    <FieldBox label="Notice Period" value={exp.notice_period} />
-                    <FieldBox label="Current CTC" value={exp.current_ctc} />
-                    <FieldBox label="Expected CTC" value={exp.expected_ctc} />
-                  </div>
-
-                  {Array.isArray(exp.previous_companies) && exp.previous_companies.length > 0 && (
-                    <div className="mt-4 space-y-2">
-                      <label className="text-xs font-medium text-slate-400">Previous Companies</label>
-                      <div className="flex flex-wrap gap-2">
-                        {exp.previous_companies.map((comp: string, idx: number) => (
-                          <span key={idx} className="bg-slate-900 border border-slate-800 text-slate-200 px-3 py-1 rounded-lg text-xs font-semibold">
-                            {comp}
-                          </span>
-                        ))}
+                  {expList.length === 0 ? (
+                    <p className="text-xs text-slate-500 italic">No experience records specified.</p>
+                  ) : (
+                    expList.map((exp: any, idx: number) => (
+                      <div key={idx} className="bg-[#030514] border border-slate-800 p-4 rounded-xl space-y-3">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <FieldBox label="Company" value={exp.company} />
+                          <FieldBox label="Designation" value={exp.designation} />
+                          <FieldBox label="Duration" value={exp.duration} />
+                          <FieldBox label="Responsibilities" value={exp.responsibilities} fullWidth />
+                        </div>
                       </div>
-                    </div>
+                    ))
                   )}
                 </div>
               )}
@@ -410,10 +414,9 @@ export default function Upload() {
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           <FieldBox label="Degree" value={edu.degree} />
                           <FieldBox label="Specialization" value={edu.specialization} />
-                          <FieldBox label="College" value={edu.college} />
-                          <FieldBox label="University" value={edu.university} />
+                          <FieldBox label="Institution" value={edu.institution} />
                           <FieldBox label="Year of Passing" value={edu.year_of_passing} />
-                          <FieldBox label="Percentage / CGPA" value={edu.percentage_cgpa} />
+                          <FieldBox label="Score (Percentage/CGPA)" value={edu.score} />
                         </div>
                       </div>
                     ))
@@ -431,7 +434,7 @@ export default function Upload() {
                     certList.map((cert: any, idx: number) => (
                       <div key={idx} className="bg-[#030514] border border-slate-800 p-4 rounded-xl space-y-3">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <FieldBox label="Certification Name" value={cert.certification_name} />
+                          <FieldBox label="Certification Name" value={cert.name} />
                           <FieldBox label="Issued By" value={cert.issued_by} />
                           <FieldBox label="Year" value={cert.year} />
                         </div>
@@ -447,14 +450,9 @@ export default function Upload() {
                   <h4 className="text-sm font-bold text-blue-400 uppercase tracking-wider">Skills Breakdown</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <SkillPillGroup title="Primary Skills" items={skills.primary_skills} />
-                    <SkillPillGroup title="Secondary Skills" items={skills.secondary_skills} />
                     <SkillPillGroup title="Frameworks" items={skills.frameworks} />
-                    <SkillPillGroup title="Programming Languages" items={skills.programming_languages} />
                     <SkillPillGroup title="Databases" items={skills.databases} />
                     <SkillPillGroup title="Cloud Technologies" items={skills.cloud_technologies} />
-                    <SkillPillGroup title="DevOps Tools" items={skills.devops_tools} />
-                    <SkillPillGroup title="Testing Tools" items={skills.testing_tools} />
-                    <SkillPillGroup title="AI Tools" items={skills.ai_tools} />
                   </div>
                 </div>
               )}
@@ -468,19 +466,53 @@ export default function Upload() {
                   ) : (
                     projList.map((proj: any, idx: number) => (
                       <div key={idx} className="bg-[#030514] border border-slate-800 p-4 rounded-xl space-y-3">
-                        <h5 className="text-xs font-bold text-emerald-400">Project #{idx + 1}: {proj.project_name || "Untitled"}</h5>
+                        <h5 className="text-xs font-bold text-emerald-400">Project #{idx + 1}: {proj.name || "Untitled"}</h5>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                          <FieldBox label="Client" value={proj.client} />
                           <FieldBox label="Domain" value={proj.domain} />
                           <FieldBox label="Duration" value={proj.duration} />
-                          <FieldBox label="Team Size" value={proj.team_size} />
                           <FieldBox label="Role" value={proj.role} />
-                          <FieldBox label="Technology Stack" value={proj.technology_stack} />
-                          <FieldBox label="Responsibilities" value={proj.responsibilities} fullWidth />
-                          <FieldBox label="Achievement" value={proj.achievement} fullWidth />
+                          <FieldBox label="Technology Stack" value={proj.tech_stack?.join(", ")} fullWidth />
+                          <FieldBox label="Description" value={proj.description} fullWidth />
                         </div>
                       </div>
                     ))
+                  )}
+                </div>
+              )}
+
+              {/* Tab 7: AI Evaluation */}
+              {activeTab === "evaluation" && (
+                <div className="space-y-6">
+                  <h4 className="text-sm font-bold text-blue-400 uppercase tracking-wider">AI Insight & Evaluation</h4>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="bg-[#030514] border border-blue-900/50 p-4 rounded-xl flex flex-col items-center justify-center text-center">
+                      <span className="text-xs font-bold text-slate-400 mb-1">AI Technical Score</span>
+                      <span className="text-3xl font-black text-blue-400">{aiEval.ai_technical_score || "N/A"}/100</span>
+                    </div>
+                    <FieldBox label="Experience Level" value={aiEval.experience_level} />
+                    <FieldBox label="Job Hopping Risk" value={aiEval.career_analysis?.job_hopping_risk} />
+                    <FieldBox label="Career Stability" value={aiEval.career_analysis?.career_stability} />
+                    <FieldBox label="Promotion Pattern" value={aiEval.career_analysis?.promotion_pattern} />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <SkillPillGroup title="Skill Strengths" items={aiEval.skill_strengths} />
+                    <SkillPillGroup title="Skill Weaknesses" items={aiEval.skill_weaknesses} />
+                    <SkillPillGroup title="Domain Expertise" items={aiEval.domain_expertise} />
+                    <SkillPillGroup title="Recommended Upskilling" items={aiEval.career_analysis?.recommended_upskilling} />
+                  </div>
+
+                  {aiEval.personality_analysis && (
+                    <div className="bg-[#030514] border border-slate-800 p-5 rounded-xl space-y-4">
+                      <h5 className="text-xs font-bold text-slate-300">Personality & Trait Inference</h5>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <FieldBox label="Leadership" value={`${aiEval.personality_analysis.leadership}/100`} />
+                        <FieldBox label="Team Player" value={`${aiEval.personality_analysis.team_player}/100`} />
+                        <FieldBox label="Problem Solving" value={`${aiEval.personality_analysis.problem_solving}/100`} />
+                        <FieldBox label="Communication" value={`${aiEval.personality_analysis.communication}/100`} />
+                      </div>
+                    </div>
                   )}
                 </div>
               )}

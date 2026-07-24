@@ -73,22 +73,30 @@ export default function CandidateDatabase() {
 
   useEffect(() => {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2000);
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
 
-    fetch('http://127.0.0.1:8000/api/candidates', { signal: controller.signal })
+    const token = localStorage.getItem("token") || "";
+
+    fetch('http://localhost:8002/api/v1/resumes', { 
+      signal: controller.signal,
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    })
       .then(res => res.json())
-      .then(data => {
+      .then(resData => {
         clearTimeout(timeoutId);
+        const data = resData.data?.resumes || [];
         if (Array.isArray(data) && data.length > 0) {
           const mapped = data.map((item: any, idx: number) => ({
             id: `CND100${idx + 1}`,
-            name: item.full_name || item.parsed_resume?.name || "Vijay",
-            role: item.parsed_resume?.experience?.[0]?.designation || "Senior Java Developer",
-            experience: item.parsed_resume?.years_of_experience ? `${item.parsed_resume.years_of_experience} Yrs` : "8.2 Yrs",
-            match: `${item.overall_score || 92}%`,
-            status: item.status || "Client Interview",
+            name: item.parsed_data?.full_name || item.original_filename || "Candidate",
+            role: item.parsed_data?.experience?.[0]?.designation || "Unknown Role",
+            experience: item.parsed_data?.total_experience_years ? `${item.parsed_data.total_experience_years} Yrs` : "N/A",
+            match: item.ai_evaluation?.ai_technical_score ? `${item.ai_evaluation.ai_technical_score}%` : "Pending",
+            status: item.status || "Completed",
             statusBg: "bg-emerald-950/60 border-emerald-800/50 text-emerald-400",
-            lastUpdated: "20 May 2025",
+            lastUpdated: new Date(item.created_at || Date.now()).toLocaleDateString(),
             realId: item.id
           }));
           setCandidates(mapped);
@@ -97,7 +105,8 @@ export default function CandidateDatabase() {
         }
         setLoading(false);
       })
-      .catch(() => {
+      .catch((err) => {
+        console.error("Failed to fetch candidates:", err);
         clearTimeout(timeoutId);
         setCandidates(mockCandidates);
         setLoading(false);

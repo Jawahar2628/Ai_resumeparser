@@ -19,6 +19,7 @@ class ResumeDocument(BaseModel):
     extracted_text: Optional[str] = None
     s3_url: Optional[str] = None
     parsed_data: Optional[Dict[str, Any]] = None
+    ai_evaluation: Optional[Dict[str, Any]] = None
     upload_date: str = Field(default_factory=lambda: utc_now().isoformat())
     status: ResumeStatus = ResumeStatus.PENDING
 

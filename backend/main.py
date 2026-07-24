@@ -76,7 +76,7 @@ def process_resume_background(file_path: str, candidate_id: int):
             os.remove(file_path)
 
 @app.post("/api/upload")
-async def upload_resume(background_tasks: BackgroundTasks, file: UploadFile = File(...), db: Session = Depends(get_db)):
+async def upload_resume(file: UploadFile = File(...), db: Session = Depends(get_db)):
     if not file.filename.endswith((".pdf", ".docx", ".doc")):
         raise HTTPException(status_code=400, detail="Only PDF and Word documents are supported.")
         
@@ -95,13 +95,21 @@ async def upload_resume(background_tasks: BackgroundTasks, file: UploadFile = Fi
         db.commit()
         db.refresh(db_candidate)
         
-        # Enqueue background task
-        background_tasks.add_task(process_resume_background, file_path, db_candidate.id)
+        # Process synchronously
+        process_resume_background(file_path, db_candidate.id)
         
+        # Refresh from DB
+        db.refresh(db_candidate)
+        
+        if db_candidate.status.startswith("error"):
+            raise HTTPException(status_code=500, detail=db_candidate.status)
+            
         return {
-            "message": "Resume uploaded successfully. Processing in background.",
+            "message": "Resume uploaded and parsed successfully.",
             "candidate_id": db_candidate.id,
-            "status": "processing"
+            "status": db_candidate.status,
+            "parsed_resume": db_candidate.parsed_resume,
+            "evaluation": db_candidate.evaluation
         }
         
     except Exception as e:

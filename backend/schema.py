@@ -20,11 +20,11 @@ class CertificationItem(BaseModel):
     year: str = Field(description="Year of certification")
 
 class ProjectItem(BaseModel):
-    name: str = Field(description="Project name")
+    name: str = Field(description="Project name. Distinct from employment.")
     domain: Optional[str] = Field(description="Project domain (e.g., Banking, Healthcare)")
     duration: Optional[str] = Field(description="Duration of the project")
     role: Optional[str] = Field(description="Role played in the project")
-    tech_stack: List[str] = Field(description="Technologies used in the project")
+    tech_stack: List[str] = Field(default_factory=list, description="Technologies used in the project")
     description: Optional[str] = Field(description="Brief description of the project")
 
 class ResumeSchema(BaseModel):
@@ -33,33 +33,33 @@ class ResumeSchema(BaseModel):
     phone: str = Field(description="Candidate's phone number")
     location: Optional[str] = Field(description="Current location")
     linkedin: Optional[str] = Field(description="LinkedIn profile URL")
-    total_experience_years: float = Field(description="Total years of experience extracted from resume")
-    primary_skills: List[str] = Field(description="Main technical skills")
-    frameworks: List[str] = Field(description="Frameworks known")
-    databases: List[str] = Field(description="Databases known")
-    cloud_tech: List[str] = Field(description="Cloud technologies (AWS, Azure, etc.)")
-    experience: List[ExperienceItem] = Field(description="List of past work experience")
-    education: List[EducationItem] = Field(description="List of educational qualifications")
-    certifications: List[CertificationItem] = Field(description="List of certifications")
-    projects: List[ProjectItem] = Field(description="List of projects worked on")
+    total_experience_years: float = Field(default=0.0, description="Total years of experience extracted from resume")
+    primary_skills: List[str] = Field(default_factory=list, description="Main technical skills")
+    frameworks: List[str] = Field(default_factory=list, description="Frameworks known")
+    databases: List[str] = Field(default_factory=list, description="Databases known")
+    cloud_tech: List[str] = Field(default_factory=list, description="Cloud technologies (AWS, Azure, etc.)")
+    experience: List[ExperienceItem] = Field(default_factory=list, description="List of past work experience. DO NOT INCLUDE ACADEMIC PROJECTS HERE.")
+    projects: List[ProjectItem] = Field(default_factory=list, description="List of projects worked on. SEPARATE THESE FROM EXPERIENCE. Return empty list [] if none.")
+    education: List[EducationItem] = Field(default_factory=list, description="List of educational qualifications")
+    certifications: List[CertificationItem] = Field(default_factory=list, description="List of certifications ONLY if explicitly mentioned. Return empty list [] if none.")
 
 class AIPersonalityScore(BaseModel):
-    leadership: int = Field(description="Score 1-100 for leadership potential based on experience")
-    team_player: int = Field(description="Score 1-100 for team collaboration")
-    problem_solving: int = Field(description="Score 1-100 for problem solving ability")
-    communication: int = Field(description="Score 1-100 for communication inference")
+    leadership: int = Field(default=0, description="Score 1-100 for leadership potential based on experience")
+    team_player: int = Field(default=0, description="Score 1-100 for team collaboration")
+    problem_solving: int = Field(default=0, description="Score 1-100 for problem solving ability")
+    communication: int = Field(default=0, description="Score 1-100 for communication inference")
 
 class CareerAnalysis(BaseModel):
-    job_hopping_risk: str = Field(description="Risk assessment: Low, Medium, High")
-    career_stability: str = Field(description="Overall stability inference")
-    promotion_pattern: str = Field(description="Any visible promotions in the same company?")
-    recommended_upskilling: List[str] = Field(description="Technologies the candidate should learn to grow")
+    job_hopping_risk: str = Field(default="Unknown", description="Risk assessment: Low, Medium, High")
+    career_stability: str = Field(default="Unknown", description="Overall stability inference")
+    promotion_pattern: str = Field(default="Unknown", description="Any visible promotions in the same company?")
+    recommended_upskilling: List[str] = Field(default_factory=list, description="Technologies the candidate should learn to grow")
 
 class CandidateEvaluationSchema(BaseModel):
-    experience_level: str = Field(description="Classification: Fresher, Junior, Mid-Level, Senior, Architect")
-    domain_expertise: List[str] = Field(description="Top domains the candidate has worked in")
-    ai_technical_score: int = Field(description="Overall technical strength score 1-100")
-    skill_strengths: List[str] = Field(description="Candidate's strongest skills")
-    skill_weaknesses: List[str] = Field(description="Candidate's weak areas compared to typical full stack roles")
-    personality_analysis: AIPersonalityScore
-    career_analysis: CareerAnalysis
+    experience_level: str = Field(default="Unknown", description="Classification: Fresher, Junior, Mid-Level, Senior, Architect")
+    domain_expertise: List[str] = Field(default_factory=list, description="Top domains the candidate has worked in")
+    ai_technical_score: int = Field(default=0, description="Overall technical strength score 1-100")
+    skill_strengths: List[str] = Field(default_factory=list, description="Candidate's strongest skills")
+    skill_weaknesses: List[str] = Field(default_factory=list, description="Candidate's weak areas compared to typical full stack roles")
+    personality_analysis: AIPersonalityScore = Field(default_factory=AIPersonalityScore)
+    career_analysis: CareerAnalysis = Field(default_factory=CareerAnalysis)

@@ -18,6 +18,7 @@ class ResumeResponse(BaseModel):
     extracted_text: Optional[str] = None
     s3_url: Optional[str] = None
     parsed_data: Optional[Dict[str, Any]] = None
+    ai_evaluation: Optional[Dict[str, Any]] = None
     upload_date: str
     status: ResumeStatus
 
