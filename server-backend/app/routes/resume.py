@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, File, Query, UploadFile, status
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from app.controllers.resume_controller import ResumeController
 from app.core.database import get_database
-from app.core.dependencies import get_current_active_user
+from app.core.dependencies import get_current_active_user, get_current_active_user_optional
 from app.repositories.resume_repository import ResumeRepository
 from app.services.resume_service import ResumeService
 from app.utils.enums import UserRole
@@ -29,7 +29,7 @@ def get_resume_controller(db: AsyncIOMotorDatabase = Depends(get_database)) -> R
 )
 async def upload_resume(
     file: UploadFile = File(...),
-    current_user: dict = Depends(get_current_active_user),
+    current_user: dict = Depends(get_current_active_user_optional),
     controller: ResumeController = Depends(get_resume_controller),
 ):
     return await controller.upload_resume(current_user["id"], file)

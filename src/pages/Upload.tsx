@@ -1,19 +1,24 @@
 import { useState } from "react";
-import { UploadCloud, FileText, CheckCircle2, Loader2 } from "lucide-react";
+import { UploadCloud, FileText, CheckCircle2, Loader2, X, User, Briefcase, GraduationCap, Award, Code, FolderGit2, ExternalLink } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { RESUME_UPLOAD } from "../utils/Api";
 
 export default function Upload() {
   const [isDragging, setIsDragging] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [isParsing, setIsParsing] = useState(false);
   const [pollingError, setPollingError] = useState<string | null>(null);
+  const [parsedResponse, setParsedResponse] = useState<any>(null);
+  const [showModal, setShowModal] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>("personal");
+
   const navigate = useNavigate();
 
   const steps = [
     { number: 1, title: "Upload", active: true },
-    { number: 2, title: "Parse & Extract", active: false },
-    { number: 3, title: "AI Analysis", active: false },
-    { number: 4, title: "Complete", active: false },
+    { number: 2, title: "Parse & Extract", active: parsedResponse ? true : false },
+    { number: 3, title: "AI Analysis", active: parsedResponse ? true : false },
+    { number: 4, title: "Complete", active: parsedResponse ? true : false },
   ];
 
   const recentUploads = [
@@ -54,49 +59,55 @@ export default function Upload() {
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch('http://127.0.0.1:8000/api/upload', {
+      const token = localStorage.getItem('token') || localStorage.getItem('access_token');
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(RESUME_UPLOAD, {
         method: 'POST',
+        headers,
         body: formData,
       });
 
+      const resData = await response.json();
+
       if (!response.ok) {
-        throw new Error('Upload failed. Ensure backend is running.');
+        throw new Error(resData.detail || resData.message || 'Upload failed. Ensure backend is running.');
       }
 
-      const data = await response.json();
-      const newCandidateId = data.candidate_id;
-
-      // Start polling
-      const pollInterval = setInterval(async () => {
-        try {
-          const statusRes = await fetch(`http://127.0.0.1:8000/api/candidates/${newCandidateId}`);
-          if (statusRes.ok) {
-            const statusData = await statusRes.json();
-            if (statusData.status === 'completed') {
-              clearInterval(pollInterval);
-              setIsParsing(false);
-              navigate(`/evaluation/${newCandidateId}`);
-            } else if (statusData.status && statusData.status.startsWith('error')) {
-              clearInterval(pollInterval);
-              setIsParsing(false);
-              setPollingError(statusData.status);
-            }
-          }
-        } catch (e) {
-          console.error("Polling error", e);
-        }
-      }, 2000);
+      setIsParsing(false);
+      const parsedResult = resData.data || resData;
+      setParsedResponse(parsedResult);
+      setShowModal(true);
     } catch (e: any) {
       setIsParsing(false);
-      setPollingError(e.message || "Failed to start upload");
+      setPollingError(e.message || "Failed to parse upload");
     }
   };
 
+  const pData = parsedResponse?.parsed_data || {};
+  const personal = pData.personal_information || {};
+  const exp = pData.experience || {};
+  const eduList = Array.isArray(pData.education) ? pData.education : [];
+  const certList = Array.isArray(pData.certifications) ? pData.certifications : [];
+  const skills = pData.skills || {};
+  const projList = Array.isArray(pData.projects) ? pData.projects : [];
+
   return (
-    <div className="bg-[#030514] text-slate-100 min-h-screen p-6 rounded-2xl space-y-6 font-sans">
+    <div className="bg-[#030514] text-slate-100 min-h-screen p-6 rounded-2xl space-y-6 font-sans relative">
       {/* Title Header */}
-      <div className="flex items-center gap-3">
-        <h1 className="text-xl font-bold text-slate-100">Resume Upload</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-bold text-slate-100">Resume Upload & AI Extractor</h1>
+        {parsedResponse && (
+          <button
+            onClick={() => setShowModal(true)}
+            className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-lg flex items-center gap-2"
+          >
+            View Parsed Resume Popup
+          </button>
+        )}
       </div>
 
       {/* Main Container Card Wrapper */}
@@ -139,7 +150,7 @@ export default function Upload() {
               </div>
 
               <h3 className="text-base font-bold text-slate-100 mb-4">
-                Drag & Drop your resume here
+                Drag & Drop your resume here (PDF, DOC, DOCX)
               </h3>
 
               <span className="text-xs text-slate-400 mb-4">or</span>
@@ -165,7 +176,7 @@ export default function Upload() {
                 <span className="bg-[#0a66c2] text-white w-4 h-4 rounded-xs flex items-center justify-center text-[10px] font-bold">
                   in
                 </span>
-                Import from LinkedIn
+                Import from LinkedIn (Optional)
               </button>
             </div>
 
@@ -183,17 +194,15 @@ export default function Upload() {
                 <button
                   onClick={handleParse}
                   disabled={isParsing}
-                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-xl text-xs font-bold transition-colors disabled:opacity-50"
+                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-xl text-xs font-bold transition-colors disabled:opacity-50 shadow-md"
                 >
                   {isParsing ? (
                     <>
                       <Loader2 className="animate-spin" size={14} />
-                      Parsing...
+                      Extracting AI Data...
                     </>
                   ) : (
-                    <>
-                      Start Parsing
-                    </>
+                    <>Start AI Parsing</>
                   )}
                 </button>
               </div>
@@ -202,6 +211,36 @@ export default function Upload() {
             {pollingError && (
               <div className="mt-4 p-3 bg-red-950/30 border border-red-800/40 rounded-xl text-xs text-red-400">
                 <strong>Error:</strong> {pollingError}
+              </div>
+            )}
+
+            {parsedResponse && (
+              <div className="mt-6 p-5 bg-[#0a0d24] border border-emerald-800/50 rounded-2xl space-y-4 shadow-lg">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-bold text-emerald-400 flex items-center gap-2">
+                    <CheckCircle2 size={16} /> Resume Uploaded & Auto Extracted Successfully!
+                  </h4>
+                  <button
+                    onClick={() => setShowModal(true)}
+                    className="text-xs bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg font-semibold transition-all"
+                  >
+                    Open Extracted Details Popup
+                  </button>
+                </div>
+
+                {parsedResponse.s3_url && (
+                  <div className="text-xs flex items-center gap-2">
+                    <span className="text-slate-400 font-medium">S3 Link: </span>
+                    <a
+                      href={parsedResponse.s3_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-blue-400 underline hover:text-blue-300 break-all flex items-center gap-1"
+                    >
+                      {parsedResponse.s3_url} <ExternalLink size={12} />
+                    </a>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -214,15 +253,15 @@ export default function Upload() {
               <ul className="space-y-3 text-xs text-slate-300">
                 <li className="flex items-start gap-2">
                   <span className="text-slate-500 text-base leading-none">◇</span>
-                  <span>Upload latest resume</span>
+                  <span>Upload latest resume (PDF / DOC / DOCX)</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-slate-500 text-base leading-none">◇</span>
-                  <span>Ensure all sections are clear</span>
+                  <span>Ensure all experience sections are clear</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-slate-500 text-base leading-none">◇</span>
-                  <span>Supported formats: PDF, DOC, DOCX</span>
+                  <span>Auto extracts Skills, Projects, CTC & History</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-slate-500 text-base leading-none">◇</span>
@@ -260,8 +299,249 @@ export default function Upload() {
           </div>
         </div>
       </div>
+
+      {/* PARSED RESUME DETAILS POPUP MODAL */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#080c24] border border-slate-800 rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+            {/* Modal Header */}
+            <div className="p-5 border-b border-slate-800 flex items-center justify-between bg-[#040718]">
+              <div>
+                <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2">
+                  <CheckCircle2 className="text-emerald-400" size={20} /> Extracted Resume Information
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">Module 2 – AI Resume Parsing Results</p>
+              </div>
+              <button
+                onClick={() => setShowModal(false)}
+                className="p-2 hover:bg-slate-800 rounded-xl text-slate-400 hover:text-white transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Navigation Tabs */}
+            <div className="flex items-center gap-2 px-6 border-b border-slate-800 bg-[#06091e] overflow-x-auto text-xs py-2">
+              {[
+                { id: "personal", label: "Personal Information", icon: User },
+                { id: "experience", label: "Experience", icon: Briefcase },
+                { id: "education", label: "Education", icon: GraduationCap },
+                { id: "certifications", label: "Certifications", icon: Award },
+                { id: "skills", label: "Skills", icon: Code },
+                { id: "projects", label: "Projects", icon: FolderGit2 },
+              ].map((tab) => {
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold transition-all whitespace-nowrap ${
+                      activeTab === tab.id
+                        ? "bg-blue-600 text-white shadow-md"
+                        : "text-slate-400 hover:text-slate-200 hover:bg-slate-900"
+                    }`}
+                  >
+                    <Icon size={14} />
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Modal Body Content */}
+            <div className="p-6 overflow-y-auto space-y-6 flex-1 bg-[#05081c]">
+              {/* Tab 1: Personal Information */}
+              {activeTab === "personal" && (
+                <div className="space-y-4">
+                  <h4 className="text-sm font-bold text-blue-400 uppercase tracking-wider">Personal Information</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <FieldBox label="Full Name" value={personal.full_name} />
+                    <FieldBox label="Phone Number" value={personal.phone_number} />
+                    <FieldBox label="Email" value={personal.email} />
+                    <FieldBox label="Current Location" value={personal.current_location} />
+                    <FieldBox label="Nationality" value={personal.nationality} />
+                    <FieldBox label="LinkedIn URL" value={personal.linkedin_url} isLink />
+                    <FieldBox label="GitHub URL" value={personal.github_url} isLink />
+                    <FieldBox label="Portfolio URL" value={personal.portfolio_url} isLink />
+                  </div>
+                </div>
+              )}
+
+              {/* Tab 2: Experience */}
+              {activeTab === "experience" && (
+                <div className="space-y-4">
+                  <h4 className="text-sm font-bold text-blue-400 uppercase tracking-wider">Work Experience</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <FieldBox label="Total Experience" value={exp.total_experience} />
+                    <FieldBox label="Relevant Experience" value={exp.relevant_experience} />
+                    <FieldBox label="Current Company" value={exp.current_company} />
+                    <FieldBox label="Designation" value={exp.designation} />
+                    <FieldBox label="Joining Date" value={exp.joining_date} />
+                    <FieldBox label="Relieving Date" value={exp.relieving_date} />
+                    <FieldBox label="Notice Period" value={exp.notice_period} />
+                    <FieldBox label="Current CTC" value={exp.current_ctc} />
+                    <FieldBox label="Expected CTC" value={exp.expected_ctc} />
+                  </div>
+
+                  {Array.isArray(exp.previous_companies) && exp.previous_companies.length > 0 && (
+                    <div className="mt-4 space-y-2">
+                      <label className="text-xs font-medium text-slate-400">Previous Companies</label>
+                      <div className="flex flex-wrap gap-2">
+                        {exp.previous_companies.map((comp: string, idx: number) => (
+                          <span key={idx} className="bg-slate-900 border border-slate-800 text-slate-200 px-3 py-1 rounded-lg text-xs font-semibold">
+                            {comp}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Tab 3: Education */}
+              {activeTab === "education" && (
+                <div className="space-y-4">
+                  <h4 className="text-sm font-bold text-blue-400 uppercase tracking-wider">Education History</h4>
+                  {eduList.length === 0 ? (
+                    <p className="text-xs text-slate-500 italic">No education records specified.</p>
+                  ) : (
+                    eduList.map((edu: any, idx: number) => (
+                      <div key={idx} className="bg-[#030514] border border-slate-800 p-4 rounded-xl space-y-3">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <FieldBox label="Degree" value={edu.degree} />
+                          <FieldBox label="Specialization" value={edu.specialization} />
+                          <FieldBox label="College" value={edu.college} />
+                          <FieldBox label="University" value={edu.university} />
+                          <FieldBox label="Year of Passing" value={edu.year_of_passing} />
+                          <FieldBox label="Percentage / CGPA" value={edu.percentage_cgpa} />
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+
+              {/* Tab 4: Certifications */}
+              {activeTab === "certifications" && (
+                <div className="space-y-4">
+                  <h4 className="text-sm font-bold text-blue-400 uppercase tracking-wider">Certifications</h4>
+                  {certList.length === 0 ? (
+                    <p className="text-xs text-slate-500 italic">No certification records specified.</p>
+                  ) : (
+                    certList.map((cert: any, idx: number) => (
+                      <div key={idx} className="bg-[#030514] border border-slate-800 p-4 rounded-xl space-y-3">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <FieldBox label="Certification Name" value={cert.certification_name} />
+                          <FieldBox label="Issued By" value={cert.issued_by} />
+                          <FieldBox label="Year" value={cert.year} />
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+
+              {/* Tab 5: Skills */}
+              {activeTab === "skills" && (
+                <div className="space-y-4">
+                  <h4 className="text-sm font-bold text-blue-400 uppercase tracking-wider">Skills Breakdown</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <SkillPillGroup title="Primary Skills" items={skills.primary_skills} />
+                    <SkillPillGroup title="Secondary Skills" items={skills.secondary_skills} />
+                    <SkillPillGroup title="Frameworks" items={skills.frameworks} />
+                    <SkillPillGroup title="Programming Languages" items={skills.programming_languages} />
+                    <SkillPillGroup title="Databases" items={skills.databases} />
+                    <SkillPillGroup title="Cloud Technologies" items={skills.cloud_technologies} />
+                    <SkillPillGroup title="DevOps Tools" items={skills.devops_tools} />
+                    <SkillPillGroup title="Testing Tools" items={skills.testing_tools} />
+                    <SkillPillGroup title="AI Tools" items={skills.ai_tools} />
+                  </div>
+                </div>
+              )}
+
+              {/* Tab 6: Projects */}
+              {activeTab === "projects" && (
+                <div className="space-y-4">
+                  <h4 className="text-sm font-bold text-blue-400 uppercase tracking-wider">Projects</h4>
+                  {projList.length === 0 ? (
+                    <p className="text-xs text-slate-500 italic">No projects specified.</p>
+                  ) : (
+                    projList.map((proj: any, idx: number) => (
+                      <div key={idx} className="bg-[#030514] border border-slate-800 p-4 rounded-xl space-y-3">
+                        <h5 className="text-xs font-bold text-emerald-400">Project #{idx + 1}: {proj.project_name || "Untitled"}</h5>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          <FieldBox label="Client" value={proj.client} />
+                          <FieldBox label="Domain" value={proj.domain} />
+                          <FieldBox label="Duration" value={proj.duration} />
+                          <FieldBox label="Team Size" value={proj.team_size} />
+                          <FieldBox label="Role" value={proj.role} />
+                          <FieldBox label="Technology Stack" value={proj.technology_stack} />
+                          <FieldBox label="Responsibilities" value={proj.responsibilities} fullWidth />
+                          <FieldBox label="Achievement" value={proj.achievement} fullWidth />
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-slate-800 bg-[#040718] flex items-center justify-between">
+              <span className="text-xs text-slate-400 font-mono">Status: Ready for AI Evaluation</span>
+              <button
+                onClick={() => setShowModal(false)}
+                className="bg-slate-800 hover:bg-slate-700 text-white px-5 py-2 rounded-xl text-xs font-bold transition-colors"
+              >
+                Close Popup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
+function FieldBox({ label, value, isLink, fullWidth }: { label: string; value?: string; isLink?: boolean; fullWidth?: boolean }) {
+  const displayVal = value && value.toString().trim() ? value.toString() : "N/A";
+  return (
+    <div className={`space-y-1 ${fullWidth ? "col-span-full" : ""}`}>
+      <label className="text-[11px] font-medium text-slate-400 block">{label}</label>
+      {isLink && displayVal !== "N/A" ? (
+        <a
+          href={displayVal.startsWith("http") ? displayVal : `https://${displayVal}`}
+          target="_blank"
+          rel="noreferrer"
+          className="text-xs text-blue-400 hover:underline break-all block font-medium"
+        >
+          {displayVal}
+        </a>
+      ) : (
+        <span className={`text-xs block font-semibold ${displayVal === "N/A" ? "text-slate-600 italic" : "text-slate-200"}`}>
+          {displayVal}
+        </span>
+      )}
+    </div>
+  );
+}
 
+function SkillPillGroup({ title, items }: { title: string; items?: string[] }) {
+  const list = Array.isArray(items) ? items : [];
+  return (
+    <div className="bg-[#030514] border border-slate-800 p-3.5 rounded-xl space-y-2">
+      <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wide block">{title}</span>
+      <div className="flex flex-wrap gap-1.5">
+        {list.length > 0 ? (
+          list.map((item, idx) => (
+            <span key={idx} className="bg-blue-950/60 border border-blue-800/40 text-blue-300 px-2.5 py-0.5 rounded-md text-[11px] font-medium">
+              {item}
+            </span>
+          ))
+        ) : (
+          <span className="text-[11px] text-slate-600 italic">None extracted</span>
+        )}
+      </div>
+    </div>
+  );
+}

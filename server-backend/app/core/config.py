@@ -36,6 +36,12 @@ class Settings(BaseSettings):
     UPLOAD_FOLDER: str = "uploads"
     OPENAI_API_KEY: str = "sk-placeholder-api-key"
 
+    AWS_ACCESS_KEY_ID: str = ""
+    AWS_SECRET_ACCESS_KEY: str = ""
+    AWS_REGION: str = "ap-south-1"
+    AWS_BUCKET_NAME: str = "farm2bagv4live"
+    S3_UR: str = "https://farm2bagv4live.s3.ap-south-1.amazonaws.com/"
+
     model_config = SettingsConfigDict(
         env_file=os.path.join(BASE_DIR, ".env"),
         env_file_encoding="utf-8",

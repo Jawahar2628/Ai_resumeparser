@@ -43,6 +43,41 @@ async def get_current_user(
     return user
 
 
+async def get_current_user_optional(
+    credentials: HTTPAuthorizationCredentials = Depends(security_bearer),
+    db: AsyncIOMotorDatabase = Depends(get_database),
+) -> dict:
+    """
+    Dependency to validate JWT Access Token or fallback to default user if unauthenticated.
+    """
+    if credentials and credentials.credentials:
+        try:
+            token = credentials.credentials
+            payload = decode_jwt_token(token)
+            if payload.get("type") == "access" and payload.get("sub"):
+                user_id = payload.get("sub")
+                users_collection = db[USERS_COLLECTION]
+                user = await users_collection.find_one({"id": user_id})
+                if user:
+                    return user
+        except Exception:
+            pass
+
+    # Fallback to default user (e.g. default admin or anonymous user)
+    users_collection = db[USERS_COLLECTION]
+    default_user = await users_collection.find_one({})
+    if default_user:
+        return default_user
+
+    return {"id": "guest_user", "email": "guest@example.com", "role": "user", "is_active": True}
+
+
+async def get_current_active_user_optional(
+    current_user: dict = Depends(get_current_user_optional),
+) -> dict:
+    return current_user
+
+
 async def get_current_active_user(
     current_user: dict = Depends(get_current_user),
 ) -> dict:

@@ -2,7 +2,7 @@
 Pydantic schemas for Resume entity, upload responses, text extraction, and metadata.
 """
 
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, ConfigDict
 from app.utils.enums import ResumeStatus
 
@@ -16,6 +16,8 @@ class ResumeResponse(BaseModel):
     original_filename: str
     file_path: str
     extracted_text: Optional[str] = None
+    s3_url: Optional[str] = None
+    parsed_data: Optional[Dict[str, Any]] = None
     upload_date: str
     status: ResumeStatus
 
