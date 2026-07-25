@@ -1,7 +1,16 @@
-import { NavLink } from "react-router-dom";
-import { LayoutDashboard, UploadCloud, Users, CheckCircle, Settings, Briefcase, Calendar, Video, MessageSquare, BarChart3 } from "lucide-react";
+import { useNavigate, NavLink } from "react-router-dom";
+import { LayoutDashboard, UploadCloud, Users, CheckCircle, Settings, Briefcase, Calendar, Video, MessageSquare, BarChart3, LogOut } from "lucide-react";
 
 export function Sidebar() {
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("refresh_token");
+    localStorage.removeItem("user");
+    navigate("/login");
+  };
+
   const navItems = [
     { name: "Dashboard", path: "/", icon: <LayoutDashboard size={20} /> },
     { name: "Upload Resume", path: "/upload", icon: <UploadCloud size={20} /> },
@@ -42,11 +51,18 @@ export function Sidebar() {
         ))}
       </nav>
 
-      <div className="p-4 border-t border-slate-800">
-        <div className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 cursor-pointer transition-colors">
+      <div className="p-4 border-t border-slate-800 space-y-1">
+        <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 cursor-pointer transition-colors">
           <Settings size={20} />
           <span className="font-medium">Settings</span>
         </div>
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors text-left font-medium cursor-pointer"
+        >
+          <LogOut size={20} />
+          <span>Logout</span>
+        </button>
       </div>
     </aside>
   );
