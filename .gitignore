@@ -29,7 +29,15 @@ venv/
 __pycache__/
 *.db
 
-backend/.env
-backend/venv/
-backend/__pycache__/
-backend/*.db
+ai-parser/.env
+ai-parser/venv/
+ai-parser/__pycache__/
+ai-parser/*.db
+
+
+server-backend/.env
+server-backend/venv/
+server-backend/__pycache__/
+server-backend/*.db
+server-backend/app/uploads
+

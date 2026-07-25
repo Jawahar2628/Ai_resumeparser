@@ -1,4 +1,4 @@
-const BASE_URL = "http://localhost:8000/api/v1";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export const RESUME_UPLOAD = `${BASE_URL}/resumes/upload`;
 export const RESUME_LIST = `${BASE_URL}/resumes`;
@@ -87,4 +87,4 @@ export const loginUser = async (credentials: LoginPayload): Promise<AuthSuccessR
     token_type,
     user,
   };
-};
+};

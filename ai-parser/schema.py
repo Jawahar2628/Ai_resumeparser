@@ -27,6 +27,28 @@ class ProjectItem(BaseModel):
     tech_stack: List[str] = Field(default_factory=list, description="Technologies used in the project")
     description: Optional[str] = Field(description="Brief description of the project")
 
+class BasicInfoSchema(BaseModel):
+    full_name: str = Field(description="Candidate's full name")
+    email: str = Field(description="Candidate's email address")
+    phone: str = Field(description="Candidate's phone number")
+    location: Optional[str] = Field(description="Current location")
+    linkedin: Optional[str] = Field(description="LinkedIn profile URL")
+    total_experience_years: float = Field(default=0.0, description="Total years of experience extracted from resume")
+    primary_skills: List[str] = Field(default_factory=list, description="Main technical skills")
+    frameworks: List[str] = Field(default_factory=list, description="Frameworks known")
+    databases: List[str] = Field(default_factory=list, description="Databases known")
+    cloud_tech: List[str] = Field(default_factory=list, description="Cloud technologies (AWS, Azure, etc.)")
+
+class WorkExperienceSchema(BaseModel):
+    experience: List[ExperienceItem] = Field(default_factory=list, description="List of past professional work experience (employment at companies). DO NOT INCLUDE PROJECTS HERE.")
+
+class ProjectsSchema(BaseModel):
+    projects: List[ProjectItem] = Field(default_factory=list, description="List of projects worked on (personal, academic, or professional). SEPARATE THESE FROM EMPLOYMENT EXPERIENCE. Return empty list [] if none.")
+
+class EducationSchema(BaseModel):
+    education: List[EducationItem] = Field(default_factory=list, description="List of educational qualifications")
+    certifications: List[CertificationItem] = Field(default_factory=list, description="List of certifications ONLY if explicitly mentioned. Return empty list [] if none.")
+
 class ResumeSchema(BaseModel):
     full_name: str = Field(description="Candidate's full name")
     email: str = Field(description="Candidate's email address")
