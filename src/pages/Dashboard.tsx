@@ -1,7 +1,28 @@
+import { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { Search, Bell, Settings, FileText, Sparkles, CheckCircle2, Video, ChevronDown } from 'lucide-react';
 
 export default function Dashboard() {
+  const [userName, setUserName] = useState<string>("Senthil C");
+  const [userRole, setUserRole] = useState<string>("Recruiter");
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        if (parsedUser.full_name) {
+          setUserName(parsedUser.full_name);
+        }
+        if (parsedUser.role) {
+          setUserRole(parsedUser.role.charAt(0).toUpperCase() + parsedUser.role.slice(1));
+        }
+      } catch (e) {
+        console.error("Failed to parse user data from localStorage", e);
+      }
+    }
+  }, []);
+
   const stats = [
     { label: "Total Resumes", value: "2,453", change: "+16.9% this month", changeColor: "text-emerald-500" },
     { label: "AI Parsed Today", value: "128", change: "+12.3% today", changeColor: "text-emerald-500" },
@@ -43,12 +64,12 @@ export default function Dashboard() {
     <div className="bg-[#030514] text-slate-100 min-h-screen p-6 rounded-2xl space-y-6 font-sans">
       {/* Top Header Bar */}
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-        <div className="relative w-full sm:w-80">
+        <div className="relative w-full sm:w-96">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
           <input
             type="text"
-            placeholder="Search anything..."
-            className="w-full pl-10 pr-4 py-2 bg-[#030514] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 text-slate-200 placeholder-slate-400 border border-slate-800"
+            placeholder="Search candidates, skills, position..."
+            className="w-full bg-slate-900/80 border border-slate-800 rounded-xl pl-10 pr-4 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
           />
         </div>
 
@@ -63,15 +84,15 @@ export default function Dashboard() {
           <div className="flex items-center gap-3 pl-2 border-l border-slate-800">
             <img
               src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"
-              alt="Senthil C"
+              alt={userName}
               className="w-9 h-9 rounded-full object-cover border border-slate-700"
             />
             <div className="text-left leading-tight hidden sm:block">
               <div className="flex items-center gap-1">
-                <span className="font-semibold text-slate-100 text-sm">Senthil C</span>
+                <span className="font-semibold text-slate-100 text-sm">{userName}</span>
                 <ChevronDown size={14} className="text-slate-400" />
               </div>
-              <span className="text-xs text-slate-400 font-medium">Recruiter</span>
+              <span className="text-xs text-slate-400 font-medium">{userRole}</span>
             </div>
           </div>
         </div>
