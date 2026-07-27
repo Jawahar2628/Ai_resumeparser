@@ -35,6 +35,7 @@ class Settings(BaseSettings):
 
     UPLOAD_FOLDER: str = "uploads"
     OPENAI_API_KEY: str = "sk-placeholder-api-key"
+    AI_PARSER_URL: str = "http://localhost:8001/api/upload"
 
     AWS_ACCESS_KEY_ID: str = ""
     AWS_SECRET_ACCESS_KEY: str = ""
