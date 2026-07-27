@@ -1,190 +1,508 @@
-import { useState } from "react";
-import { Check, X, ChevronDown, CheckCircle2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Filter, Search, RefreshCw, UserCheck } from "lucide-react";
+import { matchResumes, getParsedResumeSummary, type MatchFilterParams } from "../utils/Api";
 
 export default function JDMatch() {
-  const [activeTab, setActiveTab] = useState("Skill Match");
+  const [loading, setLoading] = useState(false);
 
-  const navTabs = ["Skill Match", "Experience Match", "Domain Match", "Other Factors"];
+  // Dynamic dropdown options state fetched from /api/v1/resumes/parsed-summary
+  const [summaryOptions, setSummaryOptions] = useState<{
+    locations: string[];
+    total_experience_years: number[];
+    primary_skills: string[];
+    frameworks: string[];
+    databases: string[];
+    designations: string[];
+    roles: string[];
+    year_of_passing: string[];
+    experience_levels: string[];
+    ai_technical_scores: number[];
+  }>({
+    locations: [],
+    total_experience_years: [],
+    primary_skills: [],
+    frameworks: [],
+    databases: [],
+    designations: [],
+    roles: [],
+    year_of_passing: [],
+    experience_levels: [],
+    ai_technical_scores: [],
+  });
 
-  const matchSummary = [
-    { label: "Skills Match", percentage: "95%" },
-    { label: "Experience Match", percentage: "90%" },
-    { label: "Domain Match", percentage: "90%" },
-    { label: "Location Match", percentage: "100%" },
-    { label: "Salary Match", percentage: "85%" },
-  ];
+  // Filter States
+  const [jobTitle, setJobTitle] = useState("");
+  const [minExp, setMinExp] = useState<number | "">("");
+  const [maxExp, setMaxExp] = useState<number | "">("");
+  const [location, setLocation] = useState("");
+  const [yearOfPassing, setYearOfPassing] = useState("");
+  const [skillInput, setSkillInput] = useState("");
 
-  const skillTableData = [
-    { skill: "Java", requirement: "Required", candidate: "Yes (8 Yrs)", match: true },
-    { skill: "Spring Boot", requirement: "Required", candidate: "Yes (6 Yrs)", match: true },
-    { skill: "Microservices", requirement: "Required", candidate: "Yes (3 Yrs)", match: true },
-    { skill: "Kafka", requirement: "Required", candidate: "Yes (3 Yrs)", match: true },
-    { skill: "Kubernetes", requirement: "Required", candidate: "No", match: false },
-    { skill: "AWS", requirement: "Required", candidate: "Yes (4 Yrs)", match: true },
-    { skill: "Docker", requirement: "Preferred", candidate: "Yes (3 Yrs)", match: true },
-  ];
+  const [matchedResumes, setMatchedResumes] = useState<any[]>([]);
+  const [showFilters, setShowFilters] = useState(true);
+
+  // Fetch parsed resume summary dropdown values
+  useEffect(() => {
+    const fetchSummaryDropdowns = async () => {
+      try {
+        const res = await getParsedResumeSummary();
+        
+        if (res) {
+          setSummaryOptions({
+            locations: res.locations || [],
+            total_experience_years: res.total_experience_years || [],
+            primary_skills: res.primary_skills || [],
+            frameworks: res.frameworks || [],
+            databases: res.databases || [],
+            designations: res.designations || [],
+            roles: res.roles || [],
+            year_of_passing: res.year_of_passing || [],
+            experience_levels: res.experience_levels || [],
+            ai_technical_scores: res.ai_technical_scores || [],
+          });
+        }
+      } catch (err) {
+        console.error("Failed to load parsed resume summary options:", err);
+      }
+    };
+
+    fetchSummaryDropdowns();
+  }, []);
+
+  // Fetch matched resumes whenever search button is clicked or initial load
+  const fetchMatchedCandidates = async () => {
+    setLoading(true);
+    try {
+      const skillsArray = skillInput
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+      const params: MatchFilterParams = {
+        job_title: jobTitle || undefined,
+        min_experience: minExp !== "" ? Number(minExp) : undefined,
+        max_experience: maxExp !== "" ? Number(maxExp) : undefined,
+        location: location || undefined,
+        year_of_passing: yearOfPassing || undefined,
+        skills: skillsArray.length > 0 ? skillsArray : undefined,
+      };
+
+      const res = await matchResumes(params);
+      const items = Array.isArray(res) ? res : res.resumes || [];
+      setMatchedResumes(items);
+    } catch (err) {
+      console.error("Error matching resumes:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchMatchedCandidates();
+  }, []);
 
   return (
     <div className="bg-[#030514] text-slate-100 min-h-screen p-6 rounded-2xl space-y-6 font-sans">
       {/* Top Header Bar */}
-      <div className="flex justify-between items-center">
-        <div className="flex items-center gap-3">
-          <h1 className="text-xl font-bold text-slate-100">JD Matching</h1>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-xl font-bold text-slate-100">JD Matching & Candidate Filter</h1>
+          <p className="text-xs text-slate-400">Match resume documents in MongoDB against Job Description parameters</p>
         </div>
 
-        <button className="flex items-center gap-2 bg-[#030514] border border-blue-500/60 text-blue-400 px-4 py-1.5 rounded-xl text-xs font-bold hover:bg-blue-950/30 transition-colors shadow-sm">
-          View JD
-          <ChevronDown size={14} />
+        <button
+          onClick={() => setShowFilters(!showFilters)}
+          className="flex items-center gap-2 bg-[#030514] border border-blue-500/60 text-blue-400 px-4 py-2 rounded-xl text-xs font-bold hover:bg-blue-950/30 transition-colors shadow-sm"
+        >
+          <Filter size={14} />
+          {showFilters ? "Hide Filter Panel" : "Show Filter Panel"}
         </button>
       </div>
 
-      {/* Top Row Overview Cards (3 Cards) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Card 1: Job Meta Info */}
-        <div className="bg-[#030514] p-6 rounded-2xl border border-slate-800 shadow-sm space-y-4">
-          <div>
-            <span className="text-[11px] font-semibold text-slate-400 block mb-1">Job Title</span>
-            <h2 className="text-lg font-extrabold text-slate-100">Senior Java Developer</h2>
+      {/* Multi-Filter Input Card Panel */}
+      {showFilters && (
+        <div className="bg-[#090d21] p-5 rounded-2xl border border-slate-800 space-y-4 shadow-lg">
+          <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
+            <h2 className="text-xs font-extrabold text-indigo-400 uppercase tracking-wider flex items-center gap-2">
+              <Filter size={14} /> JD Filter Parameters
+            </h2>
+            <button
+              onClick={fetchMatchedCandidates}
+              disabled={loading}
+              className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer shadow-md disabled:opacity-50"
+            >
+              {loading ? <RefreshCw size={14} className="animate-spin" /> : <Search size={14} />}
+              Apply & Search Params
+            </button>
           </div>
 
-          <div>
-            <span className="text-[11px] font-semibold text-slate-400 block mb-0.5">Experience</span>
-            <span className="text-xs font-bold text-slate-200">6-9 Years</span>
-          </div>
-
-          <div>
-            <span className="text-[11px] font-semibold text-slate-400 block mb-0.5">Location</span>
-            <span className="text-xs font-bold text-slate-200">Chennai</span>
-          </div>
-
-          <div>
-            <span className="text-[11px] font-semibold text-slate-400 block mb-0.5">Employment Type</span>
-            <span className="text-xs font-bold text-slate-200">Full Time</span>
-          </div>
-        </div>
-
-        {/* Card 2: Overall Match Score */}
-        <div className="bg-[#030514] p-6 rounded-2xl border border-slate-800 shadow-sm flex flex-col justify-between items-center text-center space-y-4">
-          <span className="text-xs font-bold text-slate-300">Overall Match Score</span>
-
-          <div className="space-y-1">
-            <span className="text-4xl font-extrabold text-slate-100 block">92%</span>
-            <span className="text-xs font-bold text-emerald-400 block">Excellent Match</span>
-          </div>
-
-          {/* Green Bar Indicator */}
-          <div className="w-full max-w-xs h-2 bg-slate-800 rounded-full overflow-hidden">
-            <div className="h-full bg-emerald-500 w-[92%] rounded-full"></div>
-          </div>
-        </div>
-
-        {/* Card 3: Match Summary List */}
-        <div className="bg-[#030514] p-6 rounded-2xl border border-slate-800 shadow-sm space-y-3">
-          <h3 className="text-xs font-bold text-slate-100 mb-2">Match Summary</h3>
-          <div className="space-y-2.5">
-            {matchSummary.map((item, i) => (
-              <div key={i} className="flex justify-between items-center text-xs pb-1 border-b border-slate-800/60 last:border-0 last:pb-0">
-                <span className="text-slate-400 font-medium">{item.label}</span>
-                <span className="font-bold text-slate-100">{item.percentage}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Main Grid: Tabs Content Table (Left 2 cols) & AI Recommendation (Right 1 col) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Section: Tabs & Table */}
-        <div className="lg:col-span-2 bg-[#030514] p-6 rounded-2xl border border-slate-800 shadow-sm space-y-6">
-          {/* Tabs Navigation Header */}
-          <div className="flex items-center gap-6 border-b border-slate-800 pb-4 overflow-x-auto">
-            {navTabs.map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`text-xs font-bold transition-colors whitespace-nowrap relative pb-4 -mb-4 ${activeTab === tab ? "text-blue-400" : "text-slate-400 hover:text-slate-200"
-                  }`}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
+            {/* Filter 1: Job Title / Role Dropdown */}
+            <div className="space-y-1">
+              <label className="text-[11px] font-semibold text-slate-400 block">Job Title / Role</label>
+              <select
+                value={jobTitle}
+                onChange={(e) => setJobTitle(e.target.value)}
+                className="w-full bg-[#030514] border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
               >
-                {tab}
-                {activeTab === tab && (
-                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500 rounded-full"></span>
+                <option value="">All Job Titles / Roles</option>
+                {summaryOptions.roles.length > 0 && (
+                  <optgroup label="Roles">
+                    {summaryOptions.roles.map((r, i) => (
+                      <option key={`role-${i}`} value={r}>{r}</option>
+                    ))}
+                  </optgroup>
                 )}
-              </button>
-            ))}
+                {summaryOptions.designations.length > 0 && (
+                  <optgroup label="Designations">
+                    {summaryOptions.designations.map((d, i) => (
+                      <option key={`desg-${i}`} value={d}>{d}</option>
+                    ))}
+                  </optgroup>
+                )}
+              </select>
+            </div>
+
+            {/* Filter 2: Min & Max Experience Dropdowns */}
+            <div className="space-y-1">
+              <label className="text-[11px] font-semibold text-slate-400 block">Experience Range (Years)</label>
+              <div className="flex items-center gap-2">
+                <select
+                  value={minExp}
+                  onChange={(e) => setMinExp(e.target.value !== "" ? Number(e.target.value) : "")}
+                  className="w-1/2 bg-[#030514] border border-slate-800 rounded-xl px-2 py-2 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+                >
+                  <option value="">Min Exp</option>
+                  {summaryOptions.total_experience_years.map((y, i) => (
+                    <option key={`min-${i}`} value={y}>{y} Yrs</option>
+                  ))}
+                </select>
+                <span className="text-slate-500 text-xs">-</span>
+                <select
+                  value={maxExp}
+                  onChange={(e) => setMaxExp(e.target.value !== "" ? Number(e.target.value) : "")}
+                  className="w-1/2 bg-[#030514] border border-slate-800 rounded-xl px-2 py-2 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+                >
+                  <option value="">Max Exp</option>
+                  {summaryOptions.total_experience_years.map((y, i) => (
+                    <option key={`max-${i}`} value={y}>{y} Yrs</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Filter 3: Location Dropdown */}
+            <div className="space-y-1">
+              <label className="text-[11px] font-semibold text-slate-400 block">Location</label>
+              <select
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                className="w-full bg-[#030514] border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+              >
+                <option value="">All Locations</option>
+                {summaryOptions.locations.map((loc, i) => (
+                  <option key={`loc-${i}`} value={loc}>{loc}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Filter 4: Year of Passing Dropdown */}
+            <div className="space-y-1">
+              <label className="text-[11px] font-semibold text-slate-400 block">Year of Passing</label>
+              <select
+                value={yearOfPassing}
+                onChange={(e) => setYearOfPassing(e.target.value)}
+                className="w-full bg-[#030514] border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+              >
+                <option value="">All Years of Passing</option>
+                {summaryOptions.year_of_passing.map((y, i) => (
+                  <option key={`yop-${i}`} value={y}>{y}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Filter 5: Required Skills Checkbox Selection Popover / Grid */}
+            <div className="space-y-1 md:col-span-5 pt-2 border-t border-slate-800/60">
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-bold text-indigo-400 uppercase tracking-wider block">
+                  Select Skills (Checkboxes)
+                </label>
+                {skillInput && (
+                  <button
+                    onClick={() => setSkillInput("")}
+                    className="text-[10px] text-rose-400 hover:underline font-semibold cursor-pointer"
+                  >
+                    Clear All Selected Skills
+                  </button>
+                )}
+              </div>
+
+              {/* Skills Checkboxes Categories */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 bg-[#030514] p-3.5 rounded-xl border border-slate-800 max-h-48 overflow-y-auto">
+                {/* Primary Skills */}
+                <div className="space-y-1.5">
+                  <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block border-b border-slate-800 pb-1">
+                    Primary Skills
+                  </span>
+                  {summaryOptions.primary_skills.length > 0 ? (
+                    summaryOptions.primary_skills.map((s, i) => {
+                      const selectedList = skillInput.split(",").map((item) => item.trim()).filter(Boolean);
+                      const isChecked = selectedList.includes(s);
+
+                      return (
+                        <label key={`ps-chk-${i}`} className="flex items-center gap-2 text-xs text-slate-300 hover:text-white cursor-pointer select-none py-0.5">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSkillInput((prev) => {
+                                  const list = prev.split(",").map((item) => item.trim()).filter(Boolean);
+                                  return [...list, s].join(", ");
+                                });
+                              } else {
+                                setSkillInput((prev) => {
+                                  const list = prev.split(",").map((item) => item.trim()).filter(Boolean);
+                                  return list.filter((item) => item !== s).join(", ");
+                                });
+                              }
+                            }}
+                            className="rounded border-slate-700 bg-slate-900 accent-indigo-600 w-3.5 h-3.5 cursor-pointer"
+                          />
+                          <span className="truncate">{s}</span>
+                        </label>
+                      );
+                    })
+                  ) : (
+                    <span className="text-[11px] text-slate-500 block">No skills parsed.</span>
+                  )}
+                </div>
+
+                {/* Frameworks */}
+                <div className="space-y-1.5">
+                  <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block border-b border-slate-800 pb-1">
+                    Frameworks
+                  </span>
+                  {summaryOptions.frameworks.length > 0 ? (
+                    summaryOptions.frameworks.map((f, i) => {
+                      const selectedList = skillInput.split(",").map((item) => item.trim()).filter(Boolean);
+                      const isChecked = selectedList.includes(f);
+
+                      return (
+                        <label key={`fw-chk-${i}`} className="flex items-center gap-2 text-xs text-slate-300 hover:text-white cursor-pointer select-none py-0.5">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSkillInput((prev) => {
+                                  const list = prev.split(",").map((item) => item.trim()).filter(Boolean);
+                                  return [...list, f].join(", ");
+                                });
+                              } else {
+                                setSkillInput((prev) => {
+                                  const list = prev.split(",").map((item) => item.trim()).filter(Boolean);
+                                  return list.filter((item) => item !== f).join(", ");
+                                });
+                              }
+                            }}
+                            className="rounded border-slate-700 bg-slate-900 accent-indigo-600 w-3.5 h-3.5 cursor-pointer"
+                          />
+                          <span className="truncate">{f}</span>
+                        </label>
+                      );
+                    })
+                  ) : (
+                    <span className="text-[11px] text-slate-500 block">No frameworks parsed.</span>
+                  )}
+                </div>
+
+                {/* Databases */}
+                <div className="space-y-1.5">
+                  <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block border-b border-slate-800 pb-1">
+                    Databases
+                  </span>
+                  {summaryOptions.databases.length > 0 ? (
+                    summaryOptions.databases.map((db, i) => {
+                      const selectedList = skillInput.split(",").map((item) => item.trim()).filter(Boolean);
+                      const isChecked = selectedList.includes(db);
+
+                      return (
+                        <label key={`db-chk-${i}`} className="flex items-center gap-2 text-xs text-slate-300 hover:text-white cursor-pointer select-none py-0.5">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSkillInput((prev) => {
+                                  const list = prev.split(",").map((item) => item.trim()).filter(Boolean);
+                                  return [...list, db].join(", ");
+                                });
+                              } else {
+                                setSkillInput((prev) => {
+                                  const list = prev.split(",").map((item) => item.trim()).filter(Boolean);
+                                  return list.filter((item) => item !== db).join(", ");
+                                });
+                              }
+                            }}
+                            className="rounded border-slate-700 bg-slate-900 accent-indigo-600 w-3.5 h-3.5 cursor-pointer"
+                          />
+                          <span className="truncate">{db}</span>
+                        </label>
+                      );
+                    })
+                  ) : (
+                    <span className="text-[11px] text-slate-500 block">No databases parsed.</span>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
 
-          {/* Skill Match Table */}
-          {activeTab === "Skill Match" && (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-slate-800 text-[11px] text-slate-400 font-semibold">
-                    <th className="py-2.5 px-2">Skill</th>
-                    <th className="py-2.5 px-2">JD Requirement</th>
-                    <th className="py-2.5 px-2">Candidate</th>
-                    <th className="py-2.5 px-2 text-right">Match</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60 text-xs">
-                  {skillTableData.map((row, idx) => (
-                    <tr key={idx} className="hover:bg-slate-900/40 transition-colors">
-                      <td className="py-3 px-2 font-bold text-slate-200">{row.skill}</td>
-                      <td className="py-3 px-2 text-slate-400">{row.requirement}</td>
-                      <td className={`py-3 px-2 font-semibold ${row.match ? 'text-slate-300' : 'text-rose-400'}`}>
-                        {row.candidate}
+          {/* Active Filter Skills Tags Bar */}
+          <div className="pt-2 border-t border-slate-800/80 flex flex-wrap items-center gap-2">
+            <span className="text-[11px] font-semibold text-slate-400 mr-1">Active Filter Skills:</span>
+            {skillInput ? (
+              <div className="flex flex-wrap gap-1.5 flex-1">
+                {skillInput
+                  .split(",")
+                  .map((item) => item.trim())
+                  .filter(Boolean)
+                  .map((sk, idx) => (
+                    <span
+                      key={idx}
+                      className="bg-indigo-950/80 border border-indigo-700/60 text-indigo-200 text-xs px-2.5 py-0.5 rounded-lg font-semibold flex items-center gap-1.5"
+                    >
+                      {sk}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSkillInput((prev) => {
+                            const list = prev.split(",").map((item) => item.trim()).filter(Boolean);
+                            return list.filter((item) => item !== sk).join(", ");
+                          });
+                        }}
+                        className="text-indigo-400 hover:text-white font-bold ml-0.5"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+              </div>
+            ) : (
+              <span className="text-xs text-slate-500 italic">No skill checkboxes selected.</span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Matched Results Table Section */}
+      <div className="bg-[#030514] rounded-2xl p-6 border border-slate-800 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-slate-800 pb-4">
+          <div className="flex items-center gap-2">
+            <UserCheck size={18} className="text-emerald-400" />
+            <h2 className="text-sm font-bold text-slate-100">
+              Matched Candidates ({matchedResumes.length})
+            </h2>
+          </div>
+          <span className="text-xs text-slate-400">
+            Results from <code className="text-indigo-400 font-mono">/api/v1/resumes/match</code>
+          </span>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-slate-800 text-[11px] text-slate-400 font-semibold uppercase tracking-wider">
+                <th className="py-3 px-3">Candidate Name</th>
+                <th className="py-3 px-3">Designation / Role</th>
+                <th className="py-3 px-3">Experience</th>
+                <th className="py-3 px-3">Location</th>
+                <th className="py-3 px-3">Primary Skills</th>
+                <th className="py-3 px-3">AI Tech Score</th>
+                <th className="py-3 px-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800/60 text-xs">
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="py-12 text-center text-slate-400">
+                    <div className="flex items-center justify-center gap-2">
+                      <RefreshCw size={16} className="animate-spin text-indigo-500" />
+                      <span>Fetching matched candidates from backend API...</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : matchedResumes.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-12 text-center text-slate-400">
+                    No matching candidate records found. Try adjusting filter parameters.
+                  </td>
+                </tr>
+              ) : (
+                matchedResumes.map((row) => {
+                  const p = row.parsed_data || {};
+                  const evalInfo = row.ai_evaluation || {};
+                  const name = p.full_name || p.name || row.original_filename || "Candidate";
+                  const role = p.designation || p.role || "Software Professional";
+                  const exp = p.total_experience_years !== undefined && p.total_experience_years !== null
+                    ? `${p.total_experience_years} Yrs`
+                    : p.years_of_experience !== undefined
+                    ? `${p.years_of_experience} Yrs`
+                    : "N/A";
+                  const loc = p.location || "N/A";
+                  const skillsList: string[] = p.primary_skills || p.skills || [];
+                  const score = evalInfo.ai_technical_score ?? 0;
+
+                  return (
+                    <tr key={row.id} className="hover:bg-slate-900/40 transition-colors">
+                      <td className="py-3.5 px-3 font-bold text-slate-100">{name}</td>
+                      <td className="py-3.5 px-3 text-slate-300 font-medium">{role}</td>
+                      <td className="py-3.5 px-3 text-slate-400">{exp}</td>
+                      <td className="py-3.5 px-3 text-slate-400">{loc}</td>
+                      <td className="py-3.5 px-3">
+                        <div className="flex flex-wrap gap-1 max-w-xs">
+                          {skillsList.slice(0, 4).map((s, idx) => (
+                            <span key={idx} className="bg-indigo-950/60 border border-indigo-800/40 text-indigo-300 text-[10px] px-2 py-0.5 rounded">
+                              {s}
+                            </span>
+                          ))}
+                          {skillsList.length > 4 && (
+                            <span className="text-[10px] text-slate-500 font-semibold self-center">
+                              +{skillsList.length - 4} more
+                            </span>
+                          )}
+                        </div>
                       </td>
-                      <td className="py-3 px-2 text-right">
-                        {row.match ? (
-                          <Check className="text-emerald-400 ml-auto" size={16} />
+                      <td className="py-3.5 px-3">
+                        <span className="font-bold text-emerald-400 text-xs">
+                          {score}%
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-3 text-right">
+                        {row.s3_url ? (
+                          <a
+                            href={row.s3_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 bg-indigo-600/20 border border-indigo-500/40 text-indigo-300 hover:bg-indigo-600/40 px-3 py-1 rounded-lg text-xs font-semibold transition-colors"
+                          >
+                            View Resume
+                          </a>
                         ) : (
-                          <X className="text-rose-500 ml-auto" size={16} />
+                          <span className="text-slate-500 text-xs">No File</span>
                         )}
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {activeTab !== "Skill Match" && (
-            <div className="py-8 text-center text-xs text-slate-400">
-              Detailed matching insights for {activeTab} available.
-            </div>
-          )}
-        </div>
-
-        {/* Right Section: AI Recommendation & Missing Skills */}
-        <div className="bg-[#030514] p-6 rounded-2xl border border-slate-800 shadow-sm space-y-6">
-          {/* AI Recommendation */}
-          <div className="space-y-3">
-            <h3 className="text-xs font-bold text-slate-100">AI Recommendation</h3>
-
-            <div className="bg-emerald-950/40 border border-emerald-800/50 p-3 rounded-xl flex items-center justify-center gap-2 text-emerald-400 text-xs font-bold">
-              <CheckCircle2 size={16} />
-              <span>Excellent Match</span>
-            </div>
-
-            <p className="text-xs text-slate-300 leading-relaxed">
-              This candidate is an excellent fit for this role.
-            </p>
-          </div>
-
-          {/* Missing Skills Section */}
-          <div className="space-y-3 pt-2 border-t border-slate-800">
-            <h3 className="text-xs font-bold text-slate-100">Missing Skills</h3>
-            <div className="flex flex-wrap gap-2">
-              <span className="bg-rose-950/40 border border-rose-800/50 text-rose-300 text-xs font-semibold px-3 py-1 rounded-lg">
-                Kubernetes
-              </span>
-              <span className="bg-rose-950/40 border border-rose-800/50 text-rose-300 text-xs font-semibold px-3 py-1 rounded-lg">
-                Helm
-              </span>
-            </div>
-          </div>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
   );
 }
+
 

@@ -168,6 +168,36 @@ class ResumeService:
         items = [ResumeResponse.model_validate(r) for r in resumes]
         return ResumeListResponse(total=total, resumes=items)
 
+    async def filter_resumes(
+        self,
+        user_id: str,
+        job_title: Optional[str] = None,
+        min_experience: Optional[float] = None,
+        max_experience: Optional[float] = None,
+        location: Optional[str] = None,
+        employment_type: Optional[str] = None,
+        year_of_passing: Optional[str] = None,
+        skills: Optional[List[str]] = None,
+        skip: int = 0,
+        limit: int = 100,
+    ) -> ResumeListResponse:
+        """Filter resumes belonging to user matching criteria."""
+        resumes = await self.resume_repo.filter_resumes(
+            user_id=user_id,
+            job_title=job_title,
+            min_experience=min_experience,
+            max_experience=max_experience,
+            location=location,
+            employment_type=employment_type,
+            year_of_passing=year_of_passing,
+            skills=skills,
+            skip=skip,
+            limit=limit,
+        )
+        total = len(resumes)
+        items = [ResumeResponse.model_validate(r) for r in resumes]
+        return ResumeListResponse(total=total, resumes=items)
+
     async def extract_resume_text_for_ai(self, resume_id: str, user_id: str, is_admin: bool = False) -> ResumeExtractResponse:
         """Extract and format resume text for AI parsing pipeline."""
         resume = await self.resume_repo.get_by_id(resume_id)
@@ -206,3 +236,121 @@ class ResumeService:
         deleted = await self.resume_repo.delete(resume_id)
         logger.info(f"Deleted resume record '{resume_id}' from MongoDB.")
         return deleted
+
+
+    async def get_parsed_resume_summary(
+        self,
+        user_id: str,
+        skip: int = 0,
+        limit: int = 100,
+    ):
+        """
+        Return aggregated summary arrays across user's parsed resumes.
+        """
+        raw_resumes = await self.resume_repo.get_parsed_resume_summary(
+            user_id=user_id,
+            skip=skip,
+            limit=limit,
+        )
+
+        locations = set()
+        total_experience_years = set()
+        primary_skills = set()
+        frameworks = set()
+        databases = set()
+        designations = set()
+        roles = set()
+        year_of_passing = set()
+        experience_levels = set()
+        ai_technical_scores = set()
+        personality_analysis_list = []
+
+        for item in raw_resumes:
+            parsed_data = item.get("parsed_data") or {}
+            ai_eval = item.get("ai_evaluation") or {}
+
+            # Locations
+            if parsed_data.get("location"):
+                locations.add(parsed_data["location"].strip())
+
+            # Total experience years
+            exp = parsed_data.get("total_experience_years")
+            if exp is not None and isinstance(exp, (int, float)):
+                total_experience_years.add(float(exp))
+
+            # Primary skills
+            for s in parsed_data.get("primary_skills") or []:
+                if s and isinstance(s, str) and s.strip():
+                    primary_skills.add(s.strip())
+
+            # Frameworks
+            for f in parsed_data.get("frameworks") or []:
+                if f and isinstance(f, str) and f.strip():
+                    frameworks.add(f.strip())
+
+            # Databases
+            for d in parsed_data.get("databases") or []:
+                if d and isinstance(d, str) and d.strip():
+                    databases.add(d.strip())
+
+            # Designations (from top-level field or experience entries)
+            if parsed_data.get("designation"):
+                designations.add(parsed_data["designation"].strip())
+
+            # Roles (from top-level field or projects/experience entries)
+            if parsed_data.get("role"):
+                roles.add(parsed_data["role"].strip())
+
+            # Experience array items for designation and role
+            for exp_item in parsed_data.get("experience") or []:
+                if isinstance(exp_item, dict):
+                    des = exp_item.get("designation")
+                    if des and isinstance(des, str) and des.strip():
+                        designations.add(des.strip())
+                    r = exp_item.get("role")
+                    if r and isinstance(r, str) and r.strip():
+                        roles.add(r.strip())
+
+            # Projects array items for roles/designations if present
+            for proj in parsed_data.get("projects") or []:
+                if isinstance(proj, dict):
+                    r = proj.get("role")
+                    if r and isinstance(r, str) and r.strip():
+                        roles.add(r.strip())
+
+            # Education array items for year_of_passing
+            for edu_item in parsed_data.get("education") or []:
+                if isinstance(edu_item, dict):
+                    yop = edu_item.get("year_of_passing")
+                    if yop and isinstance(yop, (str, int)) and str(yop).strip():
+                        year_of_passing.add(str(yop).strip())
+
+            # Experience levels (check both parsed_data and ai_evaluation)
+            if parsed_data.get("experience_level"):
+                experience_levels.add(str(parsed_data["experience_level"]).strip())
+            if ai_eval.get("experience_level"):
+                experience_levels.add(str(ai_eval["experience_level"]).strip())
+
+            # AI technical scores
+            score = ai_eval.get("ai_technical_score")
+            if score is not None and isinstance(score, (int, float)):
+                ai_technical_scores.add(int(score))
+
+            # Personality analysis
+            p_analysis = ai_eval.get("personality_analysis")
+            if p_analysis and isinstance(p_analysis, dict) and p_analysis not in personality_analysis_list:
+                personality_analysis_list.append(p_analysis)
+
+        return {
+            "locations": sorted(list(locations)),
+            "total_experience_years": sorted(list(total_experience_years)),
+            "primary_skills": sorted(list(primary_skills)),
+            "frameworks": sorted(list(frameworks)),
+            "databases": sorted(list(databases)),
+            "designations": sorted(list(designations)),
+            "roles": sorted(list(roles)),
+            "year_of_passing": sorted(list(year_of_passing)),
+            "experience_levels": sorted(list(experience_levels)),
+            "ai_technical_scores": sorted(list(ai_technical_scores)),
+            "personality_analysis": personality_analysis_list,
+        }

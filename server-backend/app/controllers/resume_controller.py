@@ -31,6 +31,37 @@ class ResumeController:
             message="Resumes retrieved successfully.",
         )
 
+    async def filter_resumes(
+        self,
+        user_id: str,
+        job_title: str = None,
+        min_experience: float = None,
+        max_experience: float = None,
+        location: str = None,
+        employment_type: str = None,
+        year_of_passing: str = None,
+        skills: list = None,
+        skip: int = 0,
+        limit: int = 100,
+    ) -> JSONResponse:
+        """Process request to filter resumes based on criteria."""
+        filtered_response = await self.resume_service.filter_resumes(
+            user_id=user_id,
+            job_title=job_title,
+            min_experience=min_experience,
+            max_experience=max_experience,
+            location=location,
+            employment_type=employment_type,
+            year_of_passing=year_of_passing,
+            skills=skills,
+            skip=skip,
+            limit=limit,
+        )
+        return success_response(
+            data=filtered_response.model_dump(),
+            message="Filtered resumes retrieved successfully.",
+        )
+
     async def get_resume(self, resume_id: str, user_id: str, is_admin: bool = False) -> JSONResponse:
         """Process request to get details for single resume."""
         resume_response = await self.resume_service.get_resume_by_id(resume_id, user_id, is_admin=is_admin)
@@ -53,4 +84,25 @@ class ResumeController:
         return success_response(
             data={},
             message="Resume deleted successfully.",
+        )
+
+
+    async def parsed_resume_summary(
+        self,
+        user_id: str,
+        skip: int = 0,
+        limit: int = 100,
+    ):
+        """
+        Get parsed resume summary.
+        """
+        resumes = await self.resume_service.get_parsed_resume_summary(
+            user_id=user_id,
+            skip=skip,
+            limit=limit,
+        )
+
+        return success_response(
+            data=resumes,
+            message="Parsed resume summary retrieved successfully.",
         )
