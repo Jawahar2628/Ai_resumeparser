@@ -215,4 +215,3 @@ export const getResumeById = async (resumeId: string) => {
 
   return resData.data || resData;
 };
-
