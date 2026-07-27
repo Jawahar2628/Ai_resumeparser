@@ -2,7 +2,7 @@
 Resume controller handling HTTP requests for resume upload, retrieval, text extraction, and deletion.
 """
 
-from fastapi import UploadFile, status
+from fastapi import UploadFile, status, BackgroundTasks
 from fastapi.responses import JSONResponse
 from app.services.resume_service import ResumeService
 from app.utils.response import success_response
@@ -14,9 +14,9 @@ class ResumeController:
     def __init__(self, resume_service: ResumeService):
         self.resume_service = resume_service
 
-    async def upload_resume(self, user_id: str, file: UploadFile) -> JSONResponse:
+    async def upload_resume(self, user_id: str, file: UploadFile, background_tasks: BackgroundTasks) -> JSONResponse:
         """Process resume file upload and text extraction."""
-        resume_response = await self.resume_service.upload_and_process_resume(user_id, file)
+        resume_response = await self.resume_service.upload_and_process_resume(user_id, file, background_tasks)
         return success_response(
             data=resume_response.model_dump(),
             message="Resume uploaded and processed successfully.",

@@ -2,7 +2,7 @@
 Resume processing routes for uploading PDF/DOC/DOCX files, listing resumes, text extraction, and deletion.
 """
 
-from fastapi import APIRouter, Depends, File, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, Query, UploadFile, status, BackgroundTasks
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from app.controllers.resume_controller import ResumeController
 from app.core.database import get_database
@@ -28,11 +28,12 @@ def get_resume_controller(db: AsyncIOMotorDatabase = Depends(get_database)) -> R
     description="Upload a PDF, DOC, or DOCX resume document. Extracts text and stores file metadata.",
 )
 async def upload_resume(
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     current_user: dict = Depends(get_current_active_user_optional),
     controller: ResumeController = Depends(get_resume_controller),
 ):
-    return await controller.upload_resume(current_user["id"], file)
+    return await controller.upload_resume(current_user["id"], file, background_tasks)
 
 
 @router.get(
@@ -110,7 +111,7 @@ async def parsed_resume_summary(
 )
 async def get_resume(
     resume_id: str,
-    current_user: dict = Depends(get_current_active_user),
+    current_user: dict = Depends(get_current_active_user_optional),
     controller: ResumeController = Depends(get_resume_controller),
 ):
     is_admin = current_user.get("role") == UserRole.ADMIN

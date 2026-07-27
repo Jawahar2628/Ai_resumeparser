@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 import docx
 import fitz  # PyMuPDF
-from fastapi import UploadFile
+from fastapi import UploadFile, BackgroundTasks
 from loguru import logger
 from app.core.config import settings
 from app.core.exceptions import FileUploadError, NotFoundError
@@ -29,7 +29,7 @@ class ResumeService:
         self.upload_dir = Path(__file__).resolve().parent.parent / settings.UPLOAD_FOLDER
         self.upload_dir.mkdir(parents=True, exist_ok=True)
 
-    async def upload_and_process_resume(self, user_id: str, file: UploadFile) -> ResumeResponse:
+    async def upload_and_process_resume(self, user_id: str, file: UploadFile, background_tasks: BackgroundTasks) -> ResumeResponse:
         """
         Validate file, save to disk, upload to AWS S3, parse resume using resume-parser-pro, and save document in MongoDB.
         """
@@ -74,26 +74,11 @@ class ResumeService:
             status = ResumeStatus.FAILED
             extracted_text = ""
 
-        # 3. Parse resume using AI Parser backend
+        # 3. Queue AI Parsing in background
         parsed_data = {}
         ai_evaluation = {}
-        try:
-            import httpx
-            with open(file_path, "rb") as f:
-                async with httpx.AsyncClient(timeout=120.0) as client:
-                    response = await client.post(
-                        "http://localhost:8001/api/upload",
-                        files={"file": (original_filename, f, file.content_type or "application/pdf")}
-                    )
-                    response.raise_for_status()
-                    ai_result = response.json()
-                    parsed_data = ai_result.get("parsed_resume", {})
-                    ai_evaluation = ai_result.get("evaluation", {})
-        except Exception as e:
-            logger.error(f"AI Parsing failed for '{unique_filename}': {e}")
-            status = ResumeStatus.FAILED
-
-        # 4. Create MongoDB Document
+        
+        # 4. Create MongoDB Document with PENDING status
         resume_doc = ResumeDocument(
             id=resume_id,
             user_id=user_id,
@@ -104,12 +89,87 @@ class ResumeService:
             s3_url=s3_url,
             parsed_data=parsed_data,
             ai_evaluation=ai_evaluation,
-            status=status,
+            status=ResumeStatus.PENDING,
         )
 
         created = await self.resume_repo.create(resume_doc.to_dict())
         logger.info(f"Recorded resume document in MongoDB: ID '{resume_id}' for user '{user_id}' with S3 URL '{s3_url}'")
+        
+        if status != ResumeStatus.FAILED:
+            # Enqueue the background task for AI parsing
+            background_tasks.add_task(
+                self._process_ai_parsing_async,
+                resume_id=resume_id,
+                file_path=file_path,
+                original_filename=original_filename,
+                content_type=file.content_type or "application/pdf"
+            )
+            
         return ResumeResponse.model_validate(created)
+
+    async def _process_ai_parsing_async(self, resume_id: str, file_path: str, original_filename: str, content_type: str):
+        """Background task to run AI parsing via httpx and update MongoDB."""
+        try:
+            import httpx
+            import asyncio
+            with open(file_path, "rb") as f:
+                async with httpx.AsyncClient(timeout=120.0) as client:
+                    response = await client.post(
+                        settings.AI_PARSER_URL,
+                        files={"file": (original_filename, f, content_type)}
+                    )
+                    response.raise_for_status()
+                    ai_result = response.json()
+                    
+            job_id = ai_result.get("job_id")
+            if not job_id:
+                # Fallback if old stateless ai-parser is still responding
+                if ai_result.get("status") == "completed":
+                    parsed_data = ai_result.get("parsed_resume", {})
+                    ai_evaluation = ai_result.get("evaluation", {})
+                    await self.resume_repo.update(resume_id, {
+                        "parsed_data": parsed_data,
+                        "ai_evaluation": ai_evaluation,
+                        "status": ResumeStatus.PARSED.value
+                    })
+                    return
+                else:
+                    raise Exception("No job_id returned from AI parser and not completed.")
+
+            status_url = settings.AI_PARSER_URL.replace("/upload", f"/status/{job_id}")
+            
+            # Poll for completion
+            parsed_data = {}
+            ai_evaluation = {}
+            
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                for _ in range(60): # 60 * 5 = 300 seconds max
+                    res = await client.get(status_url)
+                    res.raise_for_status()
+                    status_data = res.json()
+                    
+                    if status_data.get("status") == "completed":
+                        parsed_data = status_data.get("parsed_resume", {})
+                        ai_evaluation = status_data.get("evaluation", {})
+                        break
+                    elif status_data.get("status") == "error":
+                        raise Exception(f"AI Parser error: {status_data.get('evaluation')}")
+                        
+                    await asyncio.sleep(5)
+                else:
+                    raise Exception("AI Parser polling timed out after 5 minutes")
+                    
+            await self.resume_repo.update(resume_id, {
+                "parsed_data": parsed_data,
+                "ai_evaluation": ai_evaluation,
+                "status": ResumeStatus.PARSED.value
+            })
+            logger.info(f"Background AI Parsing completed for resume '{resume_id}'")
+        except Exception as e:
+            logger.error(f"Background AI Parsing failed for '{resume_id}': {e}")
+            await self.resume_repo.update(resume_id, {
+                "status": ResumeStatus.FAILED.value
+            })
 
     def _extract_text_from_file(self, file_path: str, ext: str) -> str:
         """Extract plain text from PDF, DOCX, or DOC file."""

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { UploadCloud, FileText, CheckCircle2, Loader2, X, User, Briefcase, GraduationCap, Award, Code, FolderGit2, ExternalLink } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { RESUME_UPLOAD } from "../utils/Api";
+import { RESUME_UPLOAD, RESUME_LIST } from "../utils/Api";
 
 export default function Upload() {
   const [isDragging, setIsDragging] = useState(false);
@@ -77,9 +77,41 @@ export default function Upload() {
         throw new Error(resData.detail || resData.message || 'Upload failed. Ensure backend is running.');
       }
 
+      const initialResult = resData.data || resData;
+      const resumeId = initialResult.id;
+      
+      let finalResult = initialResult;
+      let currentStatus = (initialResult.status || "").toLowerCase();
+      let attempts = 0;
+      
+      while (currentStatus === "pending" && attempts < 60) {
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        attempts++;
+        
+        const statusRes = await fetch(`${RESUME_LIST}/${resumeId}`, {
+          method: 'GET',
+          headers
+        });
+        
+        const statusData = await statusRes.json();
+        if (!statusRes.ok) {
+          throw new Error(statusData.detail || "Failed to check status.");
+        }
+        
+        finalResult = statusData.data || statusData;
+        currentStatus = (finalResult.status || "").toLowerCase();
+        
+        if (currentStatus === "failed" || currentStatus === "error") {
+          throw new Error("AI Parsing failed on the backend.");
+        }
+      }
+      
+      if (currentStatus === "pending") {
+         throw new Error("Parsing timed out after 5 minutes.");
+      }
+
       setIsParsing(false);
-      const parsedResult = resData.data || resData;
-      setParsedResponse(parsedResult);
+      setParsedResponse(finalResult);
       setShowModal(true);
     } catch (e: any) {
       setIsParsing(false);

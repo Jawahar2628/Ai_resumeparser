@@ -3,12 +3,17 @@ import { Search, Filter, Download, Eye, FileText, X, User, Briefcase } from "luc
 import { useNavigate } from "react-router-dom";
 import { getResumes, getResumeById } from "../utils/Api";
 
+import { RESUME_LIST } from "../utils/Api";
+
 export default function CandidateDatabase() {
   const navigate = useNavigate();
   const [candidates, setCandidates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  // ... (mockCandidates array skipped here for brevity, keeping original lines intact)
+
 
   // Detailed candidate state for Modal when Eye icon is clicked
   const [selectedCandidateDetail, setSelectedCandidateDetail] = useState<any>(null);
