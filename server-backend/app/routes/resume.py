@@ -51,6 +51,58 @@ async def list_resumes(
 
 
 @router.get(
+    "/match",
+    status_code=status.HTTP_200_OK,
+    summary="Match and filter resumes by criteria",
+    description="Filter user resumes by job title, experience range, location, employment type, and required skills.",
+)
+async def match_resumes(
+    job_title: str = Query(None, description="Job title or role keyword filter"),
+    min_experience: float = Query(None, ge=0, description="Minimum total years of experience"),
+    max_experience: float = Query(None, ge=0, description="Maximum total years of experience"),
+    location: str = Query(None, description="Preferred location or city filter"),
+    employment_type: str = Query(None, description="Employment type (e.g. Full Time, Part Time, Contract)"),
+    year_of_passing: str = Query(None, description="Year of passing graduation filter"),
+    skills: list[str] = Query(None, description="List of required skills"),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=500),
+    current_user: dict = Depends(get_current_active_user),
+    controller: ResumeController = Depends(get_resume_controller),
+):
+    return await controller.filter_resumes(
+        user_id=current_user["id"],
+        job_title=job_title,
+        min_experience=min_experience,
+        max_experience=max_experience,
+        location=location,
+        employment_type=employment_type,
+        year_of_passing=year_of_passing,
+        skills=skills,
+        skip=skip,
+        limit=limit,
+    )
+
+
+@router.get(
+    "/parsed-summary",
+    status_code=status.HTTP_200_OK,
+    summary="Parsed Resume Summary",
+    description="Returns only parsed resume fields for dashboard/list view.",
+)
+async def parsed_resume_summary(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=500),
+    current_user: dict = Depends(get_current_active_user),
+    controller: ResumeController = Depends(get_resume_controller),
+):
+    return await controller.parsed_resume_summary(
+        user_id=current_user["id"],
+        skip=skip,
+        limit=limit,
+    )
+
+
+@router.get(
     "/{resume_id}",
     status_code=status.HTTP_200_OK,
     summary="Get resume details",

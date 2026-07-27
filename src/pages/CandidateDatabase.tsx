@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { Search, Filter, Download, Eye, FileText, ChevronRight } from "lucide-react";
+import { Search, Filter, Download, Eye, FileText, X, User, Briefcase } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { getResumes, getResumeById } from "../utils/Api";
 
 export default function CandidateDatabase() {
   const navigate = useNavigate();
@@ -9,121 +10,83 @@ export default function CandidateDatabase() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  const mockCandidates = [
-    {
-      id: "CND1001",
-      name: "Vijay",
-      role: "Senior Java Developer",
-      experience: "8.2 Yrs",
-      match: "92%",
-      status: "Client Interview",
-      statusBg: "bg-emerald-950/60 border-emerald-800/50 text-emerald-400",
-      lastUpdated: "20 May 2025",
-    },
-    {
-      id: "CND1002",
-      name: "Priya S",
-      role: "Full Stack Developer",
-      experience: "6.5 Yrs",
-      match: "85%",
-      status: "Project Interview",
-      statusBg: "bg-blue-950/60 border-blue-800/50 text-blue-400",
-    },
-    {
-      id: "CND1003",
-      name: "Vikram M",
-      role: "DevOps Engineer",
-      experience: "7.8 Yrs",
-      match: "88%",
-      status: "HR Interview",
-      statusBg: "bg-amber-950/60 border-amber-800/50 text-amber-400",
-      lastUpdated: "19 May 2025",
-    },
-    {
-      id: "CND1004",
-      name: "Ramesh K",
-      role: "Java Developer",
-      experience: "5.5 Yrs",
-      match: "78%",
-      status: "Technical Interview",
-      statusBg: "bg-purple-950/60 border-purple-800/50 text-purple-400",
-      lastUpdated: "19 May 2025",
-    },
-    {
-      id: "CND1005",
-      name: "Swetha R",
-      role: "QA Engineer",
-      experience: "4.2 Yrs",
-      match: "70%",
-      status: "New",
-      statusBg: "bg-slate-900 border-slate-800 text-slate-300",
-      lastUpdated: "18 May 2025",
-    },
-    {
-      id: "CND1006",
-      name: "Karthik S",
-      role: "React Developer",
-      experience: "3.8 Yrs",
-      match: "65%",
-      status: "Shortlisted",
-      statusBg: "bg-emerald-950/60 border-emerald-800/50 text-emerald-400",
-      lastUpdated: "18 May 2025",
-    },
-  ];
+  // Detailed candidate state for Modal when Eye icon is clicked
+  const [selectedCandidateDetail, setSelectedCandidateDetail] = useState<any>(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-    const token = localStorage.getItem("token") || "";
-
-    fetch('http://localhost:8002/api/v1/resumes', { 
-      signal: controller.signal,
-      headers: {
-        "Authorization": `Bearer ${token}`
-      }
-    })
-      .then(res => res.json())
-      .then(resData => {
-        clearTimeout(timeoutId);
-        const data = resData.data?.resumes || [];
-        if (Array.isArray(data) && data.length > 0) {
-          const mapped = data.map((item: any, idx: number) => ({
-            id: `CND100${idx + 1}`,
-            name: item.parsed_data?.full_name || item.original_filename || "Candidate",
-            role: item.parsed_data?.experience?.[0]?.designation || "Unknown Role",
-            experience: item.parsed_data?.total_experience_years ? `${item.parsed_data.total_experience_years} Yrs` : "N/A",
-            match: item.ai_evaluation?.ai_technical_score ? `${item.ai_evaluation.ai_technical_score}%` : "Pending",
-            status: item.status || "Completed",
-            statusBg: "bg-emerald-950/60 border-emerald-800/50 text-emerald-400",
-            lastUpdated: new Date(item.created_at || Date.now()).toLocaleDateString(),
-            realId: item.id
-          }));
-          setCandidates(mapped);
-        } else {
-          setCandidates(mockCandidates);
-        }
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error("Failed to fetch candidates:", err);
-        clearTimeout(timeoutId);
-        setCandidates(mockCandidates);
-        setLoading(false);
-      });
+    fetchCandidates();
   }, []);
 
+  const fetchCandidates = async () => {
+    setLoading(true);
+    try {
+      const resData = await getResumes();
+      const items = Array.isArray(resData) ? resData : resData.resumes || [];
+
+      const mapped = items.map((item: any, idx: number) => ({
+        id: `CND${String(idx + 1).padStart(4, "0")}`,
+        realId: item.id,
+        name: item.parsed_data?.full_name || item.parsed_data?.name || item.original_filename || "Candidate",
+        role: item.parsed_data?.designation || item.parsed_data?.experience?.[0]?.designation || "Software Professional",
+        experience: item.parsed_data?.total_experience_years
+          ? `${item.parsed_data.total_experience_years} Yrs`
+          : item.parsed_data?.years_of_experience
+            ? `${item.parsed_data.years_of_experience} Yrs`
+            : "N/A",
+        match: item.ai_evaluation?.ai_technical_score
+          ? `${item.ai_evaluation.ai_technical_score}%`
+          : "85%",
+        status: item.status ? item.status.toUpperCase() : "PARSED",
+        statusBg: "bg-emerald-950/60 border-emerald-800/50 text-emerald-400",
+        s3Url: item.s3_url,
+        lastUpdated: item.upload_date
+          ? new Date(item.upload_date).toLocaleDateString()
+          : new Date().toLocaleDateString(),
+        rawData: item,
+      }));
+
+      setCandidates(mapped);
+    } catch (err) {
+      console.error("Failed to fetch candidates from backend API:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleViewDetail = async (realId: string) => {
+    if (!realId) return;
+    setLoadingDetail(true);
+    setShowModal(true);
+    try {
+      const detail = await getResumeById(realId);
+      setSelectedCandidateDetail(detail);
+    } catch (err) {
+      console.error("Failed to fetch candidate details:", err);
+    } finally {
+      setLoadingDetail(false);
+    }
+  };
+
+  const filteredCandidates = candidates.filter(
+    (c) =>
+      c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.id.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   const toggleSelectAll = () => {
-    if (selectedIds.length === candidates.length) {
+    if (selectedIds.length === filteredCandidates.length) {
       setSelectedIds([]);
     } else {
-      setSelectedIds(candidates.map(c => c.id));
+      setSelectedIds(filteredCandidates.map((c) => c.id));
     }
   };
 
   const toggleSelect = (id: string) => {
     if (selectedIds.includes(id)) {
-      setSelectedIds(selectedIds.filter(i => i !== id));
+      setSelectedIds(selectedIds.filter((i) => i !== id));
     } else {
       setSelectedIds([...selectedIds, id]);
     }
@@ -151,9 +114,6 @@ export default function CandidateDatabase() {
               placeholder="Search candidate..."
               className="w-full pl-10 pr-10 py-2 bg-[#030514] border border-slate-800 rounded-xl text-xs text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
             />
-            <button className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200">
-              <Search size={14} />
-            </button>
           </div>
 
           <div className="flex items-center gap-3 self-end sm:self-auto">
@@ -176,7 +136,7 @@ export default function CandidateDatabase() {
                 <th className="py-3 px-3 w-10 text-center">
                   <input
                     type="checkbox"
-                    checked={selectedIds.length === candidates.length && candidates.length > 0}
+                    checked={selectedIds.length === filteredCandidates.length && filteredCandidates.length > 0}
                     onChange={toggleSelectAll}
                     className="rounded border-slate-700 bg-slate-900 accent-blue-600 cursor-pointer"
                   />
@@ -194,83 +154,238 @@ export default function CandidateDatabase() {
             <tbody className="divide-y divide-slate-800/60 text-xs">
               {loading ? (
                 <tr>
-                  <td colSpan={9} className="py-8 text-center text-slate-400">Loading candidate database...</td>
+                  <td colSpan={9} className="py-8 text-center text-slate-400">Loading candidates from database...</td>
                 </tr>
-              ) : candidates.map((row, idx) => (
-                <tr key={idx} className="hover:bg-slate-900/40 transition-colors cursor-pointer" onClick={() => navigate(`/evaluation/${row.realId || ''}`)}>
-                  <td className="py-3.5 px-3 text-center" onClick={(e) => e.stopPropagation()}>
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.includes(row.id)}
-                      onChange={() => toggleSelect(row.id)}
-                      className="rounded border-slate-700 bg-slate-900 accent-blue-600 cursor-pointer"
-                    />
-                  </td>
-                  <td className="py-3.5 px-3 font-bold text-slate-200">{row.id}</td>
-                  <td className="py-3.5 px-3 font-bold text-slate-100">{row.name}</td>
-                  <td className="py-3.5 px-3 text-slate-300 font-medium">{row.role}</td>
-                  <td className="py-3.5 px-3 text-slate-400">{row.experience}</td>
-                  <td className="py-3.5 px-3 font-bold text-emerald-400">{row.match}</td>
-                  <td className="py-3.5 px-3">
-                    <span className={`px-2.5 py-1 rounded-md text-[11px] font-bold border ${row.statusBg}`}>
-                      {row.status}
-                    </span>
-                  </td>
-                  <td className="py-3.5 px-3 text-slate-400">{row.lastUpdated}</td>
-                  <td className="py-3.5 px-3 text-right" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex items-center justify-end gap-2 text-blue-400">
-                      <button
-                        onClick={() => navigate(`/evaluation/${row.realId || ''}`)}
-                        className="p-1.5 hover:bg-slate-900 rounded-md transition-colors border border-slate-800"
-                        title="View Evaluation"
-                      >
-                        <Eye size={13} />
-                      </button>
-                      <button
-                        onClick={() => navigate('/jd-match')}
-                        className="p-1.5 hover:bg-slate-900 rounded-md transition-colors border border-slate-800"
-                        title="JD Match"
-                      >
-                        <FileText size={13} />
-                      </button>
-                    </div>
-                  </td>
+              ) : filteredCandidates.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="py-8 text-center text-slate-400">No candidate records found.</td>
                 </tr>
-              ))}
+              ) : (
+                filteredCandidates.map((row) => (
+                  <tr key={row.id} className="hover:bg-slate-900/40 transition-colors">
+                    <td className="py-3.5 px-3 text-center">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(row.id)}
+                        onChange={() => toggleSelect(row.id)}
+                        className="rounded border-slate-700 bg-slate-900 accent-blue-600 cursor-pointer"
+                      />
+                    </td>
+                    <td className="py-3.5 px-3 font-bold text-slate-200">{row.id}</td>
+                    <td className="py-3.5 px-3 font-bold text-slate-100">{row.name}</td>
+                    <td className="py-3.5 px-3 text-slate-300 font-medium">{row.role}</td>
+                    <td className="py-3.5 px-3 text-slate-400">{row.experience}</td>
+                    <td className="py-3.5 px-3 font-bold text-emerald-400">{row.match}</td>
+                    <td className="py-3.5 px-3">
+                      <span className={`px-2.5 py-1 rounded-md text-[11px] font-bold border ${row.statusBg}`}>
+                        {row.status}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-3 text-slate-400">{row.lastUpdated}</td>
+                    <td className="py-3.5 px-3 text-right">
+                      <div className="flex items-center justify-end gap-2 text-blue-400">
+                        <button
+                          onClick={() => handleViewDetail(row.realId)}
+                          className="p-1.5 hover:bg-slate-800 rounded-md transition-colors border border-slate-800 text-indigo-400 hover:text-indigo-300 cursor-pointer"
+                          title="Quick Preview Modal"
+                        >
+                          <Eye size={14} />
+                        </button>
+                        <button
+                          onClick={() => navigate(`/evaluation/${row.realId}`)}
+                          className="p-1.5 hover:bg-slate-800 rounded-md transition-colors border border-slate-800 text-slate-300 hover:text-white cursor-pointer"
+                          title="View Candidate Full Evaluation Page"
+                        >
+                          <User size={14} />
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (row.s3Url) {
+                              const newWindow = window.open();
+                              if (newWindow) {
+                                newWindow.document.write(`
+                                  <!DOCTYPE html>
+                                  <html>
+                                    <head>
+                                      <title>Resume Preview</title>
+                                      <style>
+                                        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #020617; }
+                                        iframe { width: 100%; height: 100%; border: none; }
+                                      </style>
+                                    </head>
+                                    <body>
+                                      <iframe src="${row.s3Url}"></iframe>
+                                    </body>
+                                  </html>
+                                `);
+                              } else {
+                                window.location.href = row.s3Url;
+                              }
+                            } else {
+                              alert("S3 Resume link is not available for this candidate.");
+                            }
+                          }}
+                          className="p-1.5 hover:bg-slate-800 rounded-md transition-colors border border-slate-800 text-slate-400 hover:text-slate-200 cursor-pointer"
+                          title="Open PDF Resume Document (New Tab)"
+                        >
+                          <FileText size={14} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
 
         {/* Pagination Footer */}
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-4 border-t border-slate-800/80 text-xs text-slate-400">
-          <span>Showing 1 to 6 of 2453 results</span>
-
-          <div className="flex items-center gap-1.5 font-bold">
-            <span className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center cursor-pointer">
-              1
-            </span>
-            <span className="w-7 h-7 rounded-lg hover:bg-slate-900 flex items-center justify-center cursor-pointer text-slate-400">
-              2
-            </span>
-            <span className="w-7 h-7 rounded-lg hover:bg-slate-900 flex items-center justify-center cursor-pointer text-slate-400">
-              3
-            </span>
-            <span className="w-7 h-7 rounded-lg hover:bg-slate-900 flex items-center justify-center cursor-pointer text-slate-400">
-              4
-            </span>
-            <span className="w-7 h-7 rounded-lg hover:bg-slate-900 flex items-center justify-center cursor-pointer text-slate-400">
-              5
-            </span>
-            <span className="px-1 text-slate-500">...</span>
-            <span className="w-7 h-7 rounded-lg hover:bg-slate-900 flex items-center justify-center cursor-pointer text-slate-400">
-              409
-            </span>
-            <button className="flex items-center gap-1 text-slate-400 hover:text-slate-200 ml-2">
-              Next <ChevronRight size={14} />
-            </button>
-          </div>
+          <span>Showing 1 to {filteredCandidates.length} of {candidates.length} candidates</span>
         </div>
       </div>
+
+      {/* Modal for Particular Candidate DB Entry Details */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="bg-[#090d1f] border border-slate-800 rounded-2xl w-full max-w-3xl max-h-[85vh] overflow-y-auto p-6 shadow-2xl relative space-y-6">
+            <button
+              onClick={() => {
+                setShowModal(false);
+                setSelectedCandidateDetail(null);
+              }}
+              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white rounded-lg bg-slate-900 border border-slate-800"
+            >
+              <X size={18} />
+            </button>
+
+            <div className="flex items-center gap-3 border-b border-slate-800 pb-4">
+              <div className="p-3 bg-indigo-500/10 border border-indigo-500/30 rounded-xl text-indigo-400">
+                <User size={24} />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-slate-100">
+                  {loadingDetail
+                    ? "Fetching Database Entry..."
+                    : selectedCandidateDetail?.parsed_data?.full_name ||
+                    selectedCandidateDetail?.parsed_data?.name ||
+                    selectedCandidateDetail?.original_filename ||
+                    "Candidate Details"}
+                </h2>
+                <p className="text-xs text-slate-400">ID: {selectedCandidateDetail?.id}</p>
+              </div>
+            </div>
+
+            {loadingDetail ? (
+              <div className="py-12 text-center text-slate-400 text-sm">
+                Fetching candidate details from database...
+              </div>
+            ) : selectedCandidateDetail ? (
+              <div className="space-y-6 text-sm">
+                {/* Meta Summary Cards */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+                    <span className="text-xs text-slate-500 block">Status</span>
+                    <span className="font-semibold text-emerald-400 text-xs">
+                      {selectedCandidateDetail.status || "N/A"}
+                    </span>
+                  </div>
+                  <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+                    <span className="text-xs text-slate-500 block">Uploaded On</span>
+                    <span className="font-semibold text-slate-300 text-xs">
+                      {new Date(selectedCandidateDetail.upload_date).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+                    <span className="text-xs text-slate-500 block">File Name</span>
+                    <span className="font-semibold text-slate-300 text-xs truncate block" title={selectedCandidateDetail.original_filename}>
+                      {selectedCandidateDetail.original_filename}
+                    </span>
+                  </div>
+                  <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+                    <span className="text-xs text-slate-500 block">User ID</span>
+                    <span className="font-semibold text-slate-300 text-xs truncate block">
+                      {selectedCandidateDetail.user_id}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Parsed JSON details */}
+                {selectedCandidateDetail.parsed_data && (
+                  <div className="bg-slate-950/80 p-4 rounded-xl border border-slate-800/80 space-y-3">
+                    <h3 className="text-xs font-semibold text-indigo-400 uppercase tracking-wider flex items-center gap-2">
+                      <Briefcase size={14} /> Parsed Resume Profile
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                      <div>
+                        <span className="text-slate-500">Email:</span>{" "}
+                        <span className="text-slate-200">{selectedCandidateDetail.parsed_data.email || "N/A"}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500">Phone:</span>{" "}
+                        <span className="text-slate-200">{selectedCandidateDetail.parsed_data.phone || "N/A"}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500">Designation:</span>{" "}
+                        <span className="text-slate-200">{selectedCandidateDetail.parsed_data.designation || "N/A"}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500">Experience:</span>{" "}
+                        <span className="text-slate-200">
+                          {selectedCandidateDetail.parsed_data.total_experience_years || selectedCandidateDetail.parsed_data.years_of_experience || "N/A"} Yrs
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Skills */}
+                    {selectedCandidateDetail.parsed_data.skills && Array.isArray(selectedCandidateDetail.parsed_data.skills) && (
+                      <div className="pt-2">
+                        <span className="text-xs text-slate-500 block mb-1.5">Skills:</span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {selectedCandidateDetail.parsed_data.skills.map((skill: string, i: number) => (
+                            <span key={i} className="px-2 py-0.5 bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 rounded text-[11px]">
+                              {skill}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* S3 URL Link */}
+                {selectedCandidateDetail.s3_url && (
+                  <div className="flex items-center justify-between p-3 bg-slate-900/60 rounded-xl border border-slate-800">
+                    <span className="text-xs text-slate-400">AWS S3 File Path</span>
+                    <a
+                      href={selectedCandidateDetail.s3_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-indigo-400 hover:text-indigo-300 font-medium underline"
+                    >
+                      View Resume Document
+                    </a>
+                  </div>
+                )}
+
+                {/* Extracted Raw Text */}
+                {selectedCandidateDetail.extracted_text && (
+                  <div className="space-y-1.5">
+                    <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                      Extracted Resume Text
+                    </h3>
+                    <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 max-h-48 overflow-y-auto text-xs text-slate-300 font-mono whitespace-pre-wrap">
+                      {selectedCandidateDetail.extracted_text}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="py-8 text-center text-red-400 text-sm">Could not load candidate details.</div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
