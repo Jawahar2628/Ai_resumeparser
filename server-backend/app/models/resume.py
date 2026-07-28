@@ -2,7 +2,7 @@
 Resume entity model representation for MongoDB document persistence.
 """
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 from app.utils.enums import ResumeStatus
 from app.utils.helpers import generate_uuid, utc_now
@@ -20,6 +20,7 @@ class ResumeDocument(BaseModel):
     s3_url: Optional[str] = None
     parsed_data: Optional[Dict[str, Any]] = None
     ai_evaluation: Optional[Dict[str, Any]] = None
+    hr_updates: Optional[List[Dict[str, Any]]] = Field(default_factory=list)
     upload_date: str = Field(default_factory=lambda: utc_now().isoformat())
     status: ResumeStatus = ResumeStatus.PENDING
 

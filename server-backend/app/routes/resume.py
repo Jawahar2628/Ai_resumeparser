@@ -8,6 +8,7 @@ from app.controllers.resume_controller import ResumeController
 from app.core.database import get_database
 from app.core.dependencies import get_current_active_user, get_current_active_user_optional
 from app.repositories.resume_repository import ResumeRepository
+from app.schemas.resume import ResumeUpdateRequest
 from app.services.resume_service import ResumeService
 from app.utils.enums import UserRole
 
@@ -116,6 +117,22 @@ async def get_resume(
 ):
     is_admin = current_user.get("role") == UserRole.ADMIN
     return await controller.get_resume(resume_id, current_user["id"], is_admin=is_admin)
+
+
+@router.put(
+    "/{resume_id}",
+    status_code=status.HTTP_200_OK,
+    summary="Update resume details and record HR update",
+    description="Update resume parsed fields and append an HR evaluation update without modifying original AI baseline values.",
+)
+async def update_resume(
+    resume_id: str,
+    update_payload: ResumeUpdateRequest,
+    current_user: dict = Depends(get_current_active_user),
+    controller: ResumeController = Depends(get_resume_controller),
+):
+    is_admin = current_user.get("role") == UserRole.ADMIN
+    return await controller.update_resume(resume_id, update_payload, current_user["id"], is_admin=is_admin)
 
 
 @router.get(

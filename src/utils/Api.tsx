@@ -215,3 +215,24 @@ export const getResumeById = async (resumeId: string) => {
 
   return resData.data || resData;
 };
+
+export const updateResume = async (resumeId: string, updateData: any) => {
+  const token = localStorage.getItem("access_token") || "";
+  const response = await fetch(`${RESUME_LIST}/${resumeId}`, {
+    method: "PUT",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(updateData),
+  });
+
+  const resData = await response.json();
+  handleAuthError(response, resData);
+
+  if (!response.ok) {
+    throw new Error(resData.detail || "Failed to update resume");
+  }
+
+  return resData.data || resData;
+};
