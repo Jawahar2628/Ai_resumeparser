@@ -7,6 +7,31 @@ from pydantic import BaseModel, ConfigDict
 from app.utils.enums import ResumeStatus
 
 
+class HRUpdateSchema(BaseModel):
+    """HR Update entry DTO."""
+
+    leadership_score: Optional[float] = None
+    team_player: Optional[float] = None
+    job_hopping_risk: Optional[float] = None
+    recommended_upskilling: Optional[List[str]] = None
+    communication: Optional[float] = None
+    problem_solving: Optional[float] = None
+    skill_weaknesses: Optional[List[str]] = None
+    updated_at: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ResumeUpdateRequest(BaseModel):
+    """Resume update payload DTO."""
+
+    parsed_data: Optional[Dict[str, Any]] = None
+    status: Optional[ResumeStatus] = None
+    hr_update: Optional[HRUpdateSchema] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class ResumeResponse(BaseModel):
     """Resume metadata response DTO."""
 
@@ -19,6 +44,7 @@ class ResumeResponse(BaseModel):
     s3_url: Optional[str] = None
     parsed_data: Optional[Dict[str, Any]] = None
     ai_evaluation: Optional[Dict[str, Any]] = None
+    hr_updates: Optional[List[Dict[str, Any]]] = None
     upload_date: str
     status: ResumeStatus
 

@@ -146,6 +146,23 @@ class ResumeRepository(BaseRepository):
             update_fields["extracted_text"] = extracted_text
         return await self.update(resume_id, update_fields)
 
+    async def update_resume_fields(
+        self,
+        resume_id: str,
+        update_fields: Dict[str, Any],
+        hr_update: Optional[Dict[str, Any]] = None,
+    ) -> Optional[Dict[str, Any]]:
+        """Update resume document fields directly and optionally push a new HR Update entry."""
+        mongo_update: Dict[str, Any] = {}
+        if update_fields:
+            mongo_update["$set"] = update_fields
+        if hr_update:
+            mongo_update["$push"] = {"hr_updates": hr_update}
+
+        if mongo_update:
+            await self.collection.update_one({"id": resume_id}, mongo_update)
+        return await self.get_by_id(resume_id)
+
     async def get_parsed_resume_summary(
         self,
         user_id: str,

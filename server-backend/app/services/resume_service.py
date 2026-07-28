@@ -13,10 +13,10 @@ from app.core.config import settings
 from app.core.exceptions import FileUploadError, NotFoundError
 from app.models.resume import ResumeDocument
 from app.repositories.resume_repository import ResumeRepository
-from app.schemas.resume import ResumeExtractResponse, ResumeListResponse, ResumeResponse
+from app.schemas.resume import ResumeExtractResponse, ResumeListResponse, ResumeResponse, ResumeUpdateRequest
 from app.services.s3_service import S3Service
 from app.utils.enums import ResumeStatus
-from app.utils.helpers import generate_uuid, sanitize_filename
+from app.utils.helpers import generate_uuid, sanitize_filename, utc_now
 from app.utils.validators import validate_uploaded_file
 
 
@@ -220,6 +220,32 @@ class ResumeService:
         if not is_admin and resume["user_id"] != user_id:
             raise NotFoundError("Resume not found.")
         return ResumeResponse.model_validate(resume)
+
+    async def update_resume(self, resume_id: str, user_id: str, update_payload: ResumeUpdateRequest, is_admin: bool = False) -> ResumeResponse:
+        """Update resume metadata / parsed fields and append timestamped HR update record."""
+        existing = await self.resume_repo.get_by_id(resume_id)
+        if not existing:
+            raise NotFoundError("Resume not found.")
+        if not is_admin and existing["user_id"] != user_id:
+            raise NotFoundError("Resume not found.")
+
+        update_fields: Dict[str, Any] = {}
+        if update_payload.parsed_data is not None:
+            # Merge parsed_data updates into existing parsed_data dict
+            current_parsed = existing.get("parsed_data") or {}
+            current_parsed.update(update_payload.parsed_data)
+            update_fields["parsed_data"] = current_parsed
+
+        if update_payload.status is not None:
+            update_fields["status"] = update_payload.status.value
+
+        hr_update_dict: Optional[Dict[str, Any]] = None
+        if update_payload.hr_update is not None:
+            hr_update_dict = update_payload.hr_update.model_dump(exclude_unset=True)
+            hr_update_dict["updated_at"] = utc_now().isoformat()
+
+        updated_doc = await self.resume_repo.update_resume_fields(resume_id, update_fields, hr_update=hr_update_dict)
+        return ResumeResponse.model_validate(updated_doc)
 
     async def get_user_resumes(self, user_id: str, skip: int = 0, limit: int = 100) -> ResumeListResponse:
         """Fetch list of resumes belonging to user."""

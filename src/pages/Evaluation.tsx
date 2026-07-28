@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Bell, Settings, Mail, Phone, MapPin, ChevronDown, CheckCircle2, ExternalLink, User, Award, Brain, Briefcase, GraduationCap, Code } from "lucide-react";
-import { getResumeById, getResumes } from "../utils/Api";
+import {
+  ArrowLeft, Bell, Settings, Mail, Phone, MapPin, ChevronDown, CheckCircle2,
+  ExternalLink, User, Award, Brain, Briefcase, GraduationCap, Code, Edit3, X, Save
+} from "lucide-react";
+import { getResumeById, getResumes, updateResume } from "../utils/Api";
 
 export default function Evaluation() {
   const { id } = useParams();
@@ -13,6 +16,26 @@ export default function Evaluation() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("Experience");
+
+  // Actions dropdown & Edit Modal states
+  const [isActionsOpen, setIsActionsOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  const [editForm, setEditForm] = useState({
+    full_name: "",
+    email: "",
+    phone: "",
+    location: "",
+    total_experience_years: "",
+    leadership_score: "",
+    team_player: "",
+    job_hopping_risk: "",
+    communication: "",
+    problem_solving: "",
+    recommended_upskilling: "",
+    skill_weaknesses: "",
+  });
 
   // Fetch list of resumes to populate candidate dropdown
   useEffect(() => {
@@ -105,8 +128,8 @@ export default function Evaluation() {
   const totalExp = parsed.total_experience_years !== undefined && parsed.total_experience_years !== null
     ? `${parsed.total_experience_years} Years`
     : parsed.years_of_experience !== undefined
-    ? `${parsed.years_of_experience} Years`
-    : "N/A";
+      ? `${parsed.years_of_experience} Years`
+      : "N/A";
 
   // Combine primary_skills, frameworks, databases, cloud_tech into categorized skill matrix
   const primarySkills = parsed.primary_skills || [];
@@ -120,18 +143,95 @@ export default function Evaluation() {
   const education = parsed.education || [];
   const projects = parsed.projects || [];
   const certifications = parsed.certifications || [];
-  
-  const skillStrengths = evalData.skill_strengths || [];
-  const skillWeaknesses = evalData.skill_weaknesses || [];
+
+  const originalSkillStrengths = evalData.skill_strengths || [];
+  const originalSkillWeaknesses = evalData.skill_weaknesses || [];
   const personality = evalData.personality_analysis || {};
   const careerAnalysis = evalData.career_analysis || {};
 
+  // HR Updates array handling
+  const hrUpdatesList: any[] = candidate?.hr_updates || [];
+  const latestHrUpdate = hrUpdatesList.length > 0 ? hrUpdatesList[hrUpdatesList.length - 1] : null;
+
+  // Active score values (favoring HR Update values if provided, falling back to original AI evaluation values)
+  const activeLeadership = latestHrUpdate?.leadership_score ?? personality.leadership ?? null;
+  const activeTeamPlayer = latestHrUpdate?.team_player ?? personality.team_player ?? null;
+  const activeJobHopping = latestHrUpdate?.job_hopping_risk ?? careerAnalysis.job_hopping_risk ?? null;
+  const activeCommunication = latestHrUpdate?.communication ?? personality.communication ?? null;
+  const activeProblemSolving = latestHrUpdate?.problem_solving ?? personality.problem_solving ?? null;
+
+  const activeWeaknesses: string[] = latestHrUpdate?.skill_weaknesses ?? originalSkillWeaknesses;
+  const activeUpskilling: string[] = latestHrUpdate?.recommended_upskilling ?? (careerAnalysis.recommended_upskilling || []);
+
+  const handleOpenEditModal = () => {
+    setIsActionsOpen(false);
+    setEditForm({
+      full_name: parsed.full_name || parsed.name || "",
+      email: email !== "N/A" ? email : "",
+      phone: phone !== "N/A" ? phone : "",
+      location: location !== "N/A" ? location : "",
+      total_experience_years: parsed.total_experience_years ?? parsed.years_of_experience ?? "",
+      leadership_score: activeLeadership !== null ? String(activeLeadership) : "",
+      team_player: activeTeamPlayer !== null ? String(activeTeamPlayer) : "",
+      job_hopping_risk: activeJobHopping !== null ? String(activeJobHopping) : "",
+      communication: activeCommunication !== null ? String(activeCommunication) : "",
+      problem_solving: activeProblemSolving !== null ? String(activeProblemSolving) : "",
+      recommended_upskilling: Array.isArray(activeUpskilling) ? activeUpskilling.join(", ") : "",
+      skill_weaknesses: Array.isArray(activeWeaknesses) ? activeWeaknesses.join(", ") : "",
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!candidate?.id) return;
+    try {
+      setIsUpdating(true);
+      const payload: any = {
+        parsed_data: {
+          full_name: editForm.full_name,
+          email: editForm.email,
+          phone: editForm.phone,
+          location: editForm.location,
+          total_experience_years: editForm.total_experience_years !== "" ? Number(editForm.total_experience_years) : undefined,
+        },
+        hr_update: {
+          leadership_score: editForm.leadership_score !== "" ? Number(editForm.leadership_score) : undefined,
+          team_player: editForm.team_player !== "" ? Number(editForm.team_player) : undefined,
+          job_hopping_risk: editForm.job_hopping_risk !== "" ? Number(editForm.job_hopping_risk) : undefined,
+          communication: editForm.communication !== "" ? Number(editForm.communication) : undefined,
+          problem_solving: editForm.problem_solving !== "" ? Number(editForm.problem_solving) : undefined,
+          recommended_upskilling: editForm.recommended_upskilling
+            ? editForm.recommended_upskilling.split(",").map((s) => s.trim()).filter(Boolean)
+            : [],
+          skill_weaknesses: editForm.skill_weaknesses
+            ? editForm.skill_weaknesses.split(",").map((s) => s.trim()).filter(Boolean)
+            : [],
+        },
+      };
+
+      const updated = await updateResume(candidate.id, payload);
+      setCandidate(updated);
+      setIsEditModalOpen(false);
+    } catch (err: any) {
+      console.error("Failed to update resume:", err);
+      alert(err.message || "Failed to save update.");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   return (
-    <div className="bg-[#030514] text-slate-100 min-h-screen p-6 rounded-2xl space-y-6 font-sans">
+    <div className="bg-[#030514] text-slate-100 min-h-screen p-6 rounded-2xl space-y-6 font-sans relative">
       {/* Top Bar Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-3">
           <h1 className="text-xl font-bold text-slate-100">Candidate Profile</h1>
+          {latestHrUpdate && (
+            <span className="bg-indigo-950/80 border border-indigo-500/40 text-indigo-300 text-[10px] font-semibold px-2 py-0.5 rounded-full">
+              HR Updated
+            </span>
+          )}
         </div>
 
         <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
@@ -156,7 +256,7 @@ export default function Evaluation() {
                 const fullName = resParsed.full_name || resParsed.name || res.original_filename || "Candidate";
                 const resEmail = resParsed.email ? resParsed.email.replace(/\s+/g, "") : "";
                 const resPhone = resParsed.phone || "";
-                
+
                 const detailsStr = [resEmail, resPhone].filter(Boolean).join(" • ");
                 const label = detailsStr ? `${fullName} (${detailsStr})` : fullName;
 
@@ -170,17 +270,17 @@ export default function Evaluation() {
             <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-indigo-400 pointer-events-none" />
           </div>
 
-          <button className="p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-900 rounded-lg transition-colors border border-slate-800">
+          {/* <button className="p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-900 rounded-lg transition-colors border border-slate-800">
             <Bell size={18} />
           </button>
           <button className="p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-900 rounded-lg transition-colors border border-slate-800">
             <Settings size={18} />
-          </button>
+          </button> */}
         </div>
       </div>
 
       {/* Action Buttons Row */}
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center relative">
         <button
           onClick={() => navigate(-1)}
           className="flex items-center gap-1.5 bg-[#030514] border border-slate-800 text-slate-300 px-4 py-1.5 rounded-xl text-xs font-bold hover:bg-slate-900 transition-colors shadow-sm cursor-pointer"
@@ -189,7 +289,7 @@ export default function Evaluation() {
           Back
         </button>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 relative">
           {s3Url && (
             <a
               href={s3Url}
@@ -201,10 +301,29 @@ export default function Evaluation() {
               Open Original Resume
             </a>
           )}
-          <button className="flex items-center gap-1.5 bg-[#030514] border border-slate-800 text-slate-300 px-4 py-1.5 rounded-xl text-xs font-bold hover:bg-slate-900 transition-colors shadow-sm">
-            Actions
-            <ChevronDown size={14} />
-          </button>
+
+          {/* Actions Dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setIsActionsOpen(!isActionsOpen)}
+              className="flex items-center gap-1.5 bg-[#030514] border border-slate-800 text-slate-300 px-4 py-1.5 rounded-xl text-xs font-bold hover:bg-slate-900 transition-colors shadow-sm cursor-pointer"
+            >
+              Actions
+              <ChevronDown size={14} />
+            </button>
+
+            {isActionsOpen && (
+              <div className="absolute right-0 mt-2 w-44 bg-[#090d28] border border-slate-700/80 rounded-xl shadow-xl z-30 py-1 font-sans">
+                <button
+                  onClick={handleOpenEditModal}
+                  className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-semibold text-slate-200 hover:bg-indigo-600/30 transition-colors text-left"
+                >
+                  <Edit3 size={14} className="text-indigo-400" />
+                  Edit Evaluation
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -297,8 +416,8 @@ export default function Evaluation() {
         </div>
       </div>
 
-      {/* Metrics Row: Total Experience & Personality Trait Overview */}
-      <div className="bg-[#030514] p-6 rounded-2xl border border-slate-800 shadow-sm grid grid-cols-2 sm:grid-cols-4 gap-6 divide-x divide-slate-800">
+      {/* Metrics Row: Total Experience & HR / Evaluation Overview */}
+      <div className="bg-[#030514] p-6 rounded-2xl border border-slate-800 shadow-sm grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-6 divide-x divide-slate-800">
         <div className="space-y-1">
           <span className="text-xs font-semibold text-slate-400">Total Experience</span>
           <div className="text-base font-extrabold text-slate-100">{totalExp}</div>
@@ -306,17 +425,37 @@ export default function Evaluation() {
 
         <div className="pl-6 space-y-1">
           <span className="text-xs font-semibold text-slate-400">Leadership Score</span>
-          <div className="text-base font-extrabold text-indigo-400">{personality.leadership ? `${personality.leadership}%` : "N/A"}</div>
+          <div className="text-base font-extrabold text-indigo-400">
+            {activeLeadership !== null ? `${activeLeadership}%` : "N/A"}
+          </div>
         </div>
 
         <div className="pl-6 space-y-1">
           <span className="text-xs font-semibold text-slate-400">Team Player</span>
-          <div className="text-base font-extrabold text-emerald-400">{personality.team_player ? `${personality.team_player}%` : "N/A"}</div>
+          <div className="text-base font-extrabold text-emerald-400">
+            {activeTeamPlayer !== null ? `${activeTeamPlayer}%` : "N/A"}
+          </div>
+        </div>
+
+        <div className="pl-6 space-y-1">
+          <span className="text-xs font-semibold text-slate-400">Communication</span>
+          <div className="text-base font-extrabold text-blue-400">
+            {activeCommunication !== null ? `${activeCommunication}%` : "N/A"}
+          </div>
+        </div>
+
+        <div className="pl-6 space-y-1">
+          <span className="text-xs font-semibold text-slate-400">Problem Solving</span>
+          <div className="text-base font-extrabold text-purple-400">
+            {activeProblemSolving !== null ? `${activeProblemSolving}%` : "N/A"}
+          </div>
         </div>
 
         <div className="pl-6 space-y-1">
           <span className="text-xs font-semibold text-slate-400">Job Hopping Risk</span>
-          <div className="text-base font-extrabold text-slate-100">{careerAnalysis.job_hopping_risk || "N/A"}</div>
+          <div className="text-base font-extrabold text-amber-400">
+            {activeJobHopping !== null ? (typeof activeJobHopping === "number" ? `${activeJobHopping}%` : activeJobHopping) : "N/A"}
+          </div>
         </div>
       </div>
 
@@ -328,9 +467,8 @@ export default function Evaluation() {
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`text-xs font-bold transition-colors whitespace-nowrap relative pb-4 -mb-4 cursor-pointer ${
-                activeTab === tab ? "text-blue-400" : "text-slate-400 hover:text-slate-200"
-              }`}
+              className={`text-xs font-bold transition-colors whitespace-nowrap relative pb-4 -mb-4 cursor-pointer ${activeTab === tab ? "text-blue-400" : "text-slate-400 hover:text-slate-200"
+                }`}
             >
               {tab}
               {activeTab === tab && (
@@ -492,63 +630,313 @@ export default function Evaluation() {
         )}
 
         {activeTab === "Analysis" && (
-          <div className="space-y-6">
+          <div className="space-y-6 font-sans">
             <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
-              <Brain size={16} className="text-indigo-400" /> AI Evaluation & Personality Analysis
+              <Brain size={16} className="text-indigo-400" /> AI Evaluation & HR Update Comparison
             </h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="p-4 rounded-xl bg-emerald-950/30 border border-emerald-800/40 space-y-2">
-                <h4 className="text-xs font-bold text-emerald-400">Skill Strengths</h4>
-                {skillStrengths.length > 0 ? (
-                  <ul className="space-y-1 text-xs text-emerald-300">
-                    {skillStrengths.map((s: string, i: number) => (
-                      <li key={i}>• {s}</li>
-                    ))}
-                  </ul>
-                ) : (
-                  <div className="text-xs text-slate-400 font-normal">No specific strengths flagged.</div>
-                )}
+            {/* Side-by-side Dual Cards Grid: Original AI vs HR Updates */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* 1. Original AI Evaluation Baseline Card */}
+              <div className="p-5 rounded-2xl bg-[#090d28] border border-indigo-500/30 space-y-4">
+                <div className="flex items-center justify-between border-b border-indigo-500/20 pb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-indigo-400"></span>
+                    <h4 className="text-xs font-extrabold text-slate-100 uppercase tracking-wider">
+                      Original AI Evaluation Baseline
+                    </h4>
+                  </div>
+                  <span className="text-[10px] font-semibold bg-indigo-950 text-indigo-300 border border-indigo-800 px-2 py-0.5 rounded-full">
+                    AI Generated
+                  </span>
+                </div>
+
+                {/* Scores Grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                  <div className="bg-[#030514] p-3 rounded-xl border border-slate-800 space-y-1">
+                    <span className="text-[11px] text-slate-400 block font-medium">Leadership</span>
+                    <div className="text-base font-extrabold text-indigo-400">
+                      {personality.leadership !== undefined ? `${personality.leadership}%` : "N/A"}
+                    </div>
+                  </div>
+
+                  <div className="bg-[#030514] p-3 rounded-xl border border-slate-800 space-y-1">
+                    <span className="text-[11px] text-slate-400 block font-medium">Team Player</span>
+                    <div className="text-base font-extrabold text-emerald-400">
+                      {personality.team_player !== undefined ? `${personality.team_player}%` : "N/A"}
+                    </div>
+                  </div>
+
+                  <div className="bg-[#030514] p-3 rounded-xl border border-slate-800 space-y-1">
+                    <span className="text-[11px] text-slate-400 block font-medium">Communication</span>
+                    <div className="text-base font-extrabold text-blue-400">
+                      {personality.communication !== undefined ? `${personality.communication}%` : "N/A"}
+                    </div>
+                  </div>
+
+                  <div className="bg-[#030514] p-3 rounded-xl border border-slate-800 space-y-1">
+                    <span className="text-[11px] text-slate-400 block font-medium">Problem Solving</span>
+                    <div className="text-base font-extrabold text-purple-400">
+                      {personality.problem_solving !== undefined ? `${personality.problem_solving}%` : "N/A"}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Career & Lists */}
+                <div className="space-y-3 text-xs pt-1">
+                  <div className="flex justify-between items-center bg-[#030514] p-3 rounded-xl border border-slate-800">
+                    <span className="text-slate-400 font-medium">Job Hopping Risk</span>
+                    <span className="font-bold text-amber-400">{careerAnalysis.job_hopping_risk || "N/A"}</span>
+                  </div>
+
+                  <div className="bg-[#030514] p-3 rounded-xl border border-slate-800 space-y-1.5">
+                    <span className="text-slate-400 font-semibold block text-[11px]">Recommended Upskilling</span>
+                    {careerAnalysis.recommended_upskilling && Array.isArray(careerAnalysis.recommended_upskilling) && careerAnalysis.recommended_upskilling.length > 0 ? (
+                      <div className="flex flex-wrap gap-1.5">
+                        {careerAnalysis.recommended_upskilling.map((item: string, i: number) => (
+                          <span key={i} className="bg-indigo-950/70 text-indigo-300 border border-indigo-800/50 text-[11px] px-2 py-0.5 rounded-md font-medium">
+                            {item}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-slate-500 text-[11px]">None listed</span>
+                    )}
+                  </div>
+
+                  <div className="bg-[#030514] p-3 rounded-xl border border-slate-800 space-y-1.5">
+                    <span className="text-slate-400 font-semibold block text-[11px]">Skill Weaknesses</span>
+                    {originalSkillWeaknesses && originalSkillWeaknesses.length > 0 ? (
+                      <div className="flex flex-wrap gap-1.5">
+                        {originalSkillWeaknesses.map((item: string, i: number) => (
+                          <span key={i} className="bg-rose-950/70 text-rose-300 border border-rose-800/50 text-[11px] px-2 py-0.5 rounded-md font-medium">
+                            {item}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-slate-500 text-[11px]">None flagged</span>
+                    )}
+                  </div>
+                </div>
               </div>
 
-              <div className="p-4 rounded-xl bg-rose-950/30 border border-rose-800/40 space-y-2">
-                <h4 className="text-xs font-bold text-rose-400">Skill Weaknesses</h4>
-                {skillWeaknesses.length > 0 ? (
-                  <ul className="space-y-1 text-xs text-rose-300">
-                    {skillWeaknesses.map((w: string, i: number) => (
-                      <li key={i}>• {w}</li>
-                    ))}
-                  </ul>
-                ) : (
-                  <div className="text-xs text-slate-400 font-normal">No major weaknesses flagged.</div>
-                )}
-              </div>
+              {/* 2. HR Update Grid Card */}
+              <div className="p-5 rounded-2xl bg-[#0b1338] border border-emerald-500/40 space-y-4">
+                <div className="flex items-center justify-between border-b border-emerald-500/20 pb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+                    <h4 className="text-xs font-extrabold text-slate-100 uppercase tracking-wider">
+                      Latest HR Evaluation Update
+                    </h4>
+                  </div>
+                  {latestHrUpdate ? (
+                    <span className="text-[10px] font-semibold bg-emerald-950 text-emerald-300 border border-emerald-800 px-2 py-0.5 rounded-full">
+                      HR Overridden
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-semibold bg-slate-900 text-slate-400 border border-slate-800 px-2 py-0.5 rounded-full">
+                      Pending HR Review
+                    </span>
+                  )}
+                </div>
 
-              <div className="p-4 rounded-xl bg-amber-950/30 border border-amber-800/40 space-y-2">
-                <h4 className="text-xs font-bold text-amber-400">Recommended Upskilling</h4>
-                {careerAnalysis.recommended_upskilling && Array.isArray(careerAnalysis.recommended_upskilling) ? (
-                  <ul className="space-y-1 text-xs text-amber-300">
-                    {careerAnalysis.recommended_upskilling.map((g: string, i: number) => (
-                      <li key={i}>• {g}</li>
-                    ))}
-                  </ul>
+                {latestHrUpdate ? (
+                  <>
+                    {/* Scores Grid */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                      <div className="bg-[#030514] p-3 rounded-xl border border-slate-800 space-y-1">
+                        <span className="text-[11px] text-slate-400 block font-medium">Leadership Score</span>
+                        <div className="text-base font-extrabold text-indigo-400">
+                          {latestHrUpdate.leadership_score !== undefined ? `${latestHrUpdate.leadership_score}%` : "N/A"}
+                        </div>
+                      </div>
+
+                      <div className="bg-[#030514] p-3 rounded-xl border border-slate-800 space-y-1">
+                        <span className="text-[11px] text-slate-400 block font-medium">Team Player</span>
+                        <div className="text-base font-extrabold text-emerald-400">
+                          {latestHrUpdate.team_player !== undefined ? `${latestHrUpdate.team_player}%` : "N/A"}
+                        </div>
+                      </div>
+
+                      <div className="bg-[#030514] p-3 rounded-xl border border-slate-800 space-y-1">
+                        <span className="text-[11px] text-slate-400 block font-medium">Communication</span>
+                        <div className="text-base font-extrabold text-blue-400">
+                          {latestHrUpdate.communication !== undefined ? `${latestHrUpdate.communication}%` : "N/A"}
+                        </div>
+                      </div>
+
+                      <div className="bg-[#030514] p-3 rounded-xl border border-slate-800 space-y-1">
+                        <span className="text-[11px] text-slate-400 block font-medium">Problem Solving</span>
+                        <div className="text-base font-extrabold text-purple-400">
+                          {latestHrUpdate.problem_solving !== undefined ? `${latestHrUpdate.problem_solving}%` : "N/A"}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Career & Lists */}
+                    <div className="space-y-3 text-xs pt-1">
+                      <div className="flex justify-between items-center bg-[#030514] p-3 rounded-xl border border-slate-800">
+                        <span className="text-slate-400 font-medium">Job Hopping Risk</span>
+                        <span className="font-bold text-emerald-400">
+                          {latestHrUpdate.job_hopping_risk !== undefined ? `${latestHrUpdate.job_hopping_risk}%` : "N/A"}
+                        </span>
+                      </div>
+
+                      <div className="bg-[#030514] p-3 rounded-xl border border-slate-800 space-y-1.5">
+                        <span className="text-slate-400 font-semibold block text-[11px]">Recommended Upskilling</span>
+                        {latestHrUpdate.recommended_upskilling && Array.isArray(latestHrUpdate.recommended_upskilling) && latestHrUpdate.recommended_upskilling.length > 0 ? (
+                          <div className="flex flex-wrap gap-1.5">
+                            {latestHrUpdate.recommended_upskilling.map((item: string, i: number) => (
+                              <span key={i} className="bg-emerald-950/70 text-emerald-300 border border-emerald-800/50 text-[11px] px-2 py-0.5 rounded-md font-medium">
+                                {item}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-slate-500 text-[11px]">None listed</span>
+                        )}
+                      </div>
+
+                      <div className="bg-[#030514] p-3 rounded-xl border border-slate-800 space-y-1.5">
+                        <span className="text-slate-400 font-semibold block text-[11px]">Skill Weaknesses</span>
+                        {latestHrUpdate.skill_weaknesses && Array.isArray(latestHrUpdate.skill_weaknesses) && latestHrUpdate.skill_weaknesses.length > 0 ? (
+                          <div className="flex flex-wrap gap-1.5">
+                            {latestHrUpdate.skill_weaknesses.map((item: string, i: number) => (
+                              <span key={i} className="bg-rose-950/70 text-rose-300 border border-rose-800/50 text-[11px] px-2 py-0.5 rounded-md font-medium">
+                                {item}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-slate-500 text-[11px]">None flagged</span>
+                        )}
+                      </div>
+
+                      {latestHrUpdate.updated_at && (
+                        <div className="text-[10px] text-slate-400 text-right pt-1">
+                          Last Updated: {new Date(latestHrUpdate.updated_at).toLocaleString()}
+                        </div>
+                      )}
+                    </div>
+                  </>
                 ) : (
-                  <div className="text-xs text-slate-400 font-normal">No upskilling recommendations.</div>
+                  <div className="flex flex-col items-center justify-center py-12 text-center text-slate-400 space-y-2">
+                    <p className="text-xs">No HR updates recorded yet for this candidate.</p>
+                    <button
+                      onClick={handleOpenEditModal}
+                      className="text-xs text-indigo-400 hover:text-indigo-300 font-bold underline"
+                    >
+                      Click here to add HR Evaluation values
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
 
-            {/* Personality Analysis Breakdown */}
-            {personality && Object.keys(personality).length > 0 && (
-              <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-3">
-                <h4 className="text-xs font-bold text-slate-200">Personality Trait Score Ratings</h4>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
-                  {Object.entries(personality).map(([key, val]: [string, any]) => (
-                    <div key={key} className="space-y-1">
-                      <span className="text-slate-400 capitalize">{key.replace("_", " ")}</span>
-                      <div className="text-sm font-extrabold text-indigo-400">{val}%</div>
-                    </div>
-                  ))}
+            {/* Side-by-Side Comparison Matrix Table */}
+            {latestHrUpdate && (
+              <div className="p-5 rounded-2xl bg-[#030514] border border-slate-800 space-y-4">
+                <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+                  📊 Direct Side-by-Side Value Comparison
+                </h4>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="border-b border-slate-800 text-slate-400 bg-[#090d28]">
+                        <th className="py-2.5 px-4 font-semibold">Evaluation Metric</th>
+                        <th className="py-2.5 px-4 font-semibold text-indigo-400">Original AI Value</th>
+                        <th className="py-2.5 px-4 font-semibold text-emerald-400">HR Update Value</th>
+                        <th className="py-2.5 px-4 font-semibold text-slate-300">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/60 text-slate-200">
+                      <tr>
+                        <td className="py-2.5 px-4 font-medium text-slate-300">Leadership Score</td>
+                        <td className="py-2.5 px-4 text-indigo-300 font-semibold">{personality.leadership !== undefined ? `${personality.leadership}%` : "N/A"}</td>
+                        <td className="py-2.5 px-4 text-emerald-300 font-semibold">{latestHrUpdate.leadership_score !== undefined ? `${latestHrUpdate.leadership_score}%` : "N/A"}</td>
+                        <td className="py-2.5 px-4">
+                          <span className="bg-emerald-950 text-emerald-400 border border-emerald-800 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                            HR Updated
+                          </span>
+                        </td>
+                      </tr>
+
+                      <tr>
+                        <td className="py-2.5 px-4 font-medium text-slate-300">Team Player</td>
+                        <td className="py-2.5 px-4 text-indigo-300 font-semibold">{personality.team_player !== undefined ? `${personality.team_player}%` : "N/A"}</td>
+                        <td className="py-2.5 px-4 text-emerald-300 font-semibold">{latestHrUpdate.team_player !== undefined ? `${latestHrUpdate.team_player}%` : "N/A"}</td>
+                        <td className="py-2.5 px-4">
+                          <span className="bg-emerald-950 text-emerald-400 border border-emerald-800 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                            HR Updated
+                          </span>
+                        </td>
+                      </tr>
+
+                      <tr>
+                        <td className="py-2.5 px-4 font-medium text-slate-300">Communication</td>
+                        <td className="py-2.5 px-4 text-indigo-300 font-semibold">{personality.communication !== undefined ? `${personality.communication}%` : "N/A"}</td>
+                        <td className="py-2.5 px-4 text-emerald-300 font-semibold">{latestHrUpdate.communication !== undefined ? `${latestHrUpdate.communication}%` : "N/A"}</td>
+                        <td className="py-2.5 px-4">
+                          <span className="bg-emerald-950 text-emerald-400 border border-emerald-800 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                            HR Updated
+                          </span>
+                        </td>
+                      </tr>
+
+                      <tr>
+                        <td className="py-2.5 px-4 font-medium text-slate-300">Problem Solving</td>
+                        <td className="py-2.5 px-4 text-indigo-300 font-semibold">{personality.problem_solving !== undefined ? `${personality.problem_solving}%` : "N/A"}</td>
+                        <td className="py-2.5 px-4 text-emerald-300 font-semibold">{latestHrUpdate.problem_solving !== undefined ? `${latestHrUpdate.problem_solving}%` : "N/A"}</td>
+                        <td className="py-2.5 px-4">
+                          <span className="bg-emerald-950 text-emerald-400 border border-emerald-800 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                            HR Updated
+                          </span>
+                        </td>
+                      </tr>
+
+                      <tr>
+                        <td className="py-2.5 px-4 font-medium text-slate-300">Job Hopping Risk</td>
+                        <td className="py-2.5 px-4 text-indigo-300 font-semibold">{careerAnalysis.job_hopping_risk || "N/A"}</td>
+                        <td className="py-2.5 px-4 text-emerald-300 font-semibold">{latestHrUpdate.job_hopping_risk !== undefined ? `${latestHrUpdate.job_hopping_risk}%` : "N/A"}</td>
+                        <td className="py-2.5 px-4">
+                          <span className="bg-emerald-950 text-emerald-400 border border-emerald-800 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                            HR Updated
+                          </span>
+                        </td>
+                      </tr>
+
+                      <tr>
+                        <td className="py-2.5 px-4 font-medium text-slate-300">Recommended Upskilling</td>
+                        <td className="py-2.5 px-4 text-indigo-300">
+                          {careerAnalysis.recommended_upskilling && Array.isArray(careerAnalysis.recommended_upskilling) ? careerAnalysis.recommended_upskilling.join(", ") : "None"}
+                        </td>
+                        <td className="py-2.5 px-4 text-emerald-300">
+                          {latestHrUpdate.recommended_upskilling && Array.isArray(latestHrUpdate.recommended_upskilling) ? latestHrUpdate.recommended_upskilling.join(", ") : "None"}
+                        </td>
+                        <td className="py-2.5 px-4">
+                          <span className="bg-emerald-950 text-emerald-400 border border-emerald-800 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                            HR Updated
+                          </span>
+                        </td>
+                      </tr>
+
+                      <tr>
+                        <td className="py-2.5 px-4 font-medium text-slate-300">Skill Weaknesses</td>
+                        <td className="py-2.5 px-4 text-indigo-300">
+                          {originalSkillWeaknesses && originalSkillWeaknesses.length > 0 ? originalSkillWeaknesses.join(", ") : "None"}
+                        </td>
+                        <td className="py-2.5 px-4 text-rose-300 font-semibold">
+                          {latestHrUpdate.skill_weaknesses && Array.isArray(latestHrUpdate.skill_weaknesses) && latestHrUpdate.skill_weaknesses.length > 0 ? latestHrUpdate.skill_weaknesses.join(", ") : "None"}
+                        </td>
+                        <td className="py-2.5 px-4">
+                          <span className="bg-emerald-950 text-emerald-400 border border-emerald-800 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                            HR Updated
+                          </span>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
               </div>
             )}
@@ -583,6 +971,205 @@ export default function Evaluation() {
           </div>
         )}
       </div>
+
+      {/* EDIT EVALUATION MODAL */}
+      {isEditModalOpen && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center z-50 p-4 font-sans">
+          <div className="bg-[#090d28] border border-indigo-500/30 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 space-y-6 shadow-2xl">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <h2 className="text-base font-bold text-slate-100 flex items-center gap-2">
+                <Edit3 size={18} className="text-indigo-400" /> Edit Candidate Evaluation & HR Ratings
+              </h2>
+              <button
+                onClick={() => setIsEditModalOpen(false)}
+                className="text-slate-400 hover:text-slate-200 p-1 rounded-lg hover:bg-slate-800 transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEdit} className="space-y-5 text-xs">
+              {/* Basic Candidate Info */}
+              <div className="space-y-3">
+                <h3 className="font-bold text-indigo-300 text-xs uppercase tracking-wider">Candidate Details (Direct Update)</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-slate-400 mb-1 font-semibold">Full Name</label>
+                    <input
+                      type="text"
+                      value={editForm.full_name}
+                      onChange={(e) => setEditForm({ ...editForm, full_name: e.target.value })}
+                      className="w-full bg-[#030514] border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-400 mb-1 font-semibold">Email</label>
+                    <input
+                      type="email"
+                      value={editForm.email}
+                      onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                      className="w-full bg-[#030514] border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-400 mb-1 font-semibold">Phone</label>
+                    <input
+                      type="text"
+                      value={editForm.phone}
+                      onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                      className="w-full bg-[#030514] border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-400 mb-1 font-semibold">Location</label>
+                    <input
+                      type="text"
+                      value={editForm.location}
+                      onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
+                      className="w-full bg-[#030514] border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block text-slate-400 mb-1 font-semibold">Total Experience Years</label>
+                    <input
+                      type="number"
+                      step="0.5"
+                      value={editForm.total_experience_years}
+                      onChange={(e) => setEditForm({ ...editForm, total_experience_years: e.target.value })}
+                      className="w-full bg-[#030514] border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* HR Update Metrics */}
+              <div className="space-y-3 pt-3 border-t border-slate-800">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-bold text-indigo-300 text-xs uppercase tracking-wider">HR Evaluation Ratings (Appended to HR-Update Array)</h3>
+                  <span className="text-[10px] text-slate-400 italic">Does not modify original AI baseline</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-slate-400 mb-1 font-semibold">Leadership Score (%)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={editForm.leadership_score}
+                      onChange={(e) => setEditForm({ ...editForm, leadership_score: e.target.value })}
+                      className="w-full bg-[#030514] border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-400 mb-1 font-semibold">Team Player Score (%)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={editForm.team_player}
+                      onChange={(e) => setEditForm({ ...editForm, team_player: e.target.value })}
+                      className="w-full bg-[#030514] border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-400 mb-1 font-semibold">Communication Score (%)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={editForm.communication}
+                      onChange={(e) => setEditForm({ ...editForm, communication: e.target.value })}
+                      className="w-full bg-[#030514] border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-400 mb-1 font-semibold">Problem Solving Score (%)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={editForm.problem_solving}
+                      onChange={(e) => setEditForm({ ...editForm, problem_solving: e.target.value })}
+                      className="w-full bg-[#030514] border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block text-slate-400 mb-1 font-semibold">Job Hopping Risk (Score / Rating)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={editForm.job_hopping_risk}
+                      onChange={(e) => setEditForm({ ...editForm, job_hopping_risk: e.target.value })}
+                      placeholder="e.g. 20"
+                      className="w-full bg-[#030514] border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block text-slate-400 mb-1 font-semibold">Recommended Upskilling (Comma-separated)</label>
+                    <input
+                      type="text"
+                      value={editForm.recommended_upskilling}
+                      onChange={(e) => setEditForm({ ...editForm, recommended_upskilling: e.target.value })}
+                      placeholder="Docker, Kubernetes, System Design"
+                      className="w-full bg-[#030514] border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block text-slate-400 mb-1 font-semibold">Skill Weaknesses (Comma-separated)</label>
+                    <input
+                      type="text"
+                      value={editForm.skill_weaknesses}
+                      onChange={(e) => setEditForm({ ...editForm, skill_weaknesses: e.target.value })}
+                      placeholder="GraphQL, Microservices"
+                      className="w-full bg-[#030514] border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Form Action Buttons */}
+              <div className="flex justify-end items-center gap-3 pt-4 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl hover:bg-slate-700 transition-colors font-semibold text-xs"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUpdating}
+                  className="flex items-center gap-2 px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold transition-colors shadow-lg disabled:opacity-50 text-xs"
+                >
+                  {isUpdating ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save size={14} />
+                      Update Evaluation
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
