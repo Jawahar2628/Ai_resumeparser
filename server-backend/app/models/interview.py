@@ -1,0 +1,72 @@
+"""
+Interview entity model representation for MongoDB document persistence.
+"""
+
+from typing import Any, Dict, List, Optional
+from pydantic import BaseModel, Field
+
+from app.utils.enums import InterviewStatus, InterviewType
+from app.utils.helpers import generate_uuid, utc_now
+
+
+class InterviewDocument(BaseModel):
+    """MongoDB Interview Document structure."""
+
+    id: str = Field(default_factory=generate_uuid)
+
+    # Candidate Information
+    candidate_id: str
+    candidate_name: str
+    resume_id: Optional[str] = None
+
+    # Job Information
+    job_id: Optional[str] = None
+    job_title: str
+
+    # Interview Details
+    interview_type: InterviewType
+    round_number: int = 1
+
+    # Schedule
+    scheduled_date: str
+    scheduled_time: str
+    timezone: str = "Asia/Kolkata"
+    duration_minutes: int = 60
+
+    # Interviewer Details
+    interviewer_id: Optional[str] = None
+    interviewer_name: str
+    interviewer_email: Optional[str] = None
+
+    # Meeting Details
+    meeting_link: Optional[str] = None
+    meeting_platform: Optional[str] = None  # Google Meet / Zoom / Teams
+
+    # Status
+    status: InterviewStatus = InterviewStatus.PENDING
+
+    # Feedback
+    rating: Optional[float] = None
+    feedback: Optional[str] = None
+    strengths: List[str] = Field(default_factory=list)
+    weaknesses: List[str] = Field(default_factory=list)
+
+    # Recommendation
+    recommendation: Optional[str] = None  # Selected / Rejected / Next Round / Hold
+
+    # Notes
+    notes: Optional[str] = None
+
+    # Reschedule History
+    reschedule_history: List[Dict[str, Any]] = Field(default_factory=list)
+
+    # Audit Fields
+    created_by: Optional[str] = None
+    updated_by: Optional[str] = None
+
+    created_at: str = Field(default_factory=lambda: utc_now().isoformat())
+    updated_at: str = Field(default_factory=lambda: utc_now().isoformat())
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert pydantic model to dictionary for MongoDB operations."""
+        return self.model_dump()

@@ -23,3 +23,23 @@ class AllowedFileExtensions(str, Enum):
     PDF = "pdf"
     DOC = "doc"
     DOCX = "docx"
+
+
+class InterviewStatus(str, Enum):
+    """Interview scheduling lifecycle status."""
+    PENDING = "PENDING"
+    SCHEDULED = "SCHEDULED"
+    COMPLETED = "COMPLETED"
+    CANCELLED = "CANCELLED"
+    RESCHEDULED = "RESCHEDULED"
+    NO_SHOW = "NO_SHOW"
+
+
+class InterviewType(str, Enum):
+    """Interview round format / type."""
+    TECHNICAL = "TECHNICAL"
+    HR = "HR"
+    MANAGERIAL = "MANAGERIAL"
+    CULTURE_FIT = "CULTURE_FIT"
+    FINAL_ROUND = "FINAL_ROUND"
+    INITIAL_SCREENING = "INITIAL_SCREENING"

@@ -13,11 +13,13 @@ ALLOWED_EXTENSIONS = {"pdf", "doc", "docx"}
 
 USERS_COLLECTION = "users"
 RESUMES_COLLECTION = "resumes"
+INTERVIEWS_COLLECTION = "interviews"
 
 ERROR_USER_EXISTS = "User with this email already exists."
 ERROR_INVALID_CREDENTIALS = "Invalid email or password."
 ERROR_USER_NOT_FOUND = "User not found."
 ERROR_RESUME_NOT_FOUND = "Resume not found."
+ERROR_INTERVIEW_NOT_FOUND = "Interview not found."
 ERROR_UNAUTHORIZED = "Authentication token invalid or expired."
 ERROR_FORBIDDEN = "Insufficient privileges for this action."
 ERROR_FILE_TOO_LARGE = "File size exceeds maximum limit of 10 MB."
