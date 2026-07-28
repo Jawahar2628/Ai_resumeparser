@@ -8,6 +8,7 @@ export default function Evaluation() {
   const navigate = useNavigate();
   const [candidate, setCandidate] = useState<any>(null);
   const [resumesList, setResumesList] = useState<any[]>([]);
+  const [resumesLoading, setResumesLoading] = useState<boolean>(true);
   const [selectedResumeId, setSelectedResumeId] = useState<string>(id || "");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -15,6 +16,7 @@ export default function Evaluation() {
 
   // Fetch list of resumes to populate candidate dropdown
   useEffect(() => {
+    setResumesLoading(true);
     getResumes()
       .then((data) => {
         const list = Array.isArray(data) ? data : data?.resumes || [];
@@ -25,6 +27,9 @@ export default function Evaluation() {
       })
       .catch((err) => {
         console.error("Error fetching resumes dropdown list:", err);
+      })
+      .finally(() => {
+        setResumesLoading(false);
       });
   }, []);
 
@@ -141,9 +146,11 @@ export default function Evaluation() {
               }}
               className="w-full bg-[#0b0f29] border border-indigo-500/40 text-slate-200 text-xs rounded-xl px-3 py-2 pr-8 appearance-none focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer shadow-sm font-medium"
             >
-              {resumesList.length === 0 && (
+              {resumesLoading ? (
+                <option value="" disabled>Loading candidates...</option>
+              ) : resumesList.length === 0 ? (
                 <option value="" disabled>No candidates available</option>
-              )}
+              ) : null}
               {resumesList.map((res: any) => {
                 const resParsed = res.parsed_data || {};
                 const fullName = resParsed.full_name || resParsed.name || res.original_filename || "Candidate";
