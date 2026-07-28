@@ -3,8 +3,6 @@ import { Search, Filter, Download, Eye, FileText, X, User, Briefcase } from "luc
 import { useNavigate } from "react-router-dom";
 import { getResumes, getResumeById } from "../utils/Api";
 
-import { RESUME_LIST } from "../utils/Api";
-
 export default function CandidateDatabase() {
   const navigate = useNavigate();
   const [candidates, setCandidates] = useState<any[]>([]);
