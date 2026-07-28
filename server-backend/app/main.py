@@ -2,9 +2,11 @@
 Main FastAPI application entry point initializing lifespan, CORS, middlewares, routers, and exception handlers.
 """
 
-from fastapi import FastAPI
+import os
+from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from app.core.config import settings
 from app.core.exceptions import register_exception_handlers
@@ -56,6 +58,40 @@ def create_application() -> FastAPI:
     app.include_router(resume.router)
     app.include_router(interview.router)
 
+    # ── Serve Frontend Static Files ──────────────────────────────────────────────
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    dist_path = os.path.join(os.path.dirname(BASE_DIR), "dist")
+    if not os.path.exists(dist_path):
+        dist_path = os.path.join(BASE_DIR, "dist")
+
+    dist_assets_path = os.path.join(dist_path, "assets")
+    dist_index_path = os.path.join(dist_path, "index.html")
+
+    if os.path.exists(dist_path):
+        if os.path.exists(dist_assets_path):
+            app.mount("/assets", StaticFiles(directory=dist_assets_path), name="assets")
+
+        @app.get("/")
+        def read_root():
+            if os.path.exists(dist_index_path):
+                return FileResponse(dist_index_path)
+            raise HTTPException(status_code=404, detail="Frontend index.html not found")
+
+        @app.get("/{catchall:path}")
+        def read_index(catchall: str):
+            # Do not capture API routes to avoid returning HTML for bad API calls
+            if catchall.startswith(("api/", "health", "docs", "redoc", "openapi.json", "static/")):
+                raise HTTPException(status_code=404, detail="Not Found")
+
+            file_path = os.path.join(dist_path, catchall)
+            if catchall and os.path.isfile(file_path):
+                return FileResponse(file_path)
+
+            if os.path.exists(dist_index_path):
+                return FileResponse(dist_index_path)
+
+            raise HTTPException(status_code=404, detail="Frontend index.html not found")
+
     return app
 
 
@@ -71,3 +107,5 @@ if __name__ == "__main__":
         port=settings.PORT,
         reload=settings.DEBUG,
     )
+
+
