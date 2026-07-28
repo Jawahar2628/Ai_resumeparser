@@ -1,0 +1,148 @@
+"""
+Interview routes for scheduling, filtering, updating, feedback submission, and deletion.
+"""
+
+from typing import Optional
+from fastapi import APIRouter, Depends, Query, status
+from motor.motor_asyncio import AsyncIOMotorDatabase
+
+from app.controllers.interview_controller import InterviewController
+from app.core.database import get_database
+from app.core.dependencies import get_current_active_user, get_current_active_user_optional
+from app.repositories.interview_repository import InterviewRepository
+from app.schemas.interview import (
+    InterviewCreateRequest,
+    InterviewFeedbackRequest,
+    InterviewRescheduleRequest,
+    InterviewUpdateRequest,
+)
+from app.services.interview_service import InterviewService
+from app.utils.enums import InterviewStatus, InterviewType
+
+router = APIRouter(prefix="/api/v1/interviews", tags=["Interviews"])
+
+
+def get_interview_controller(db: AsyncIOMotorDatabase = Depends(get_database)) -> InterviewController:
+    """Dependency injector for InterviewController."""
+    interview_repo = InterviewRepository(db)
+    interview_service = InterviewService(interview_repo)
+    return InterviewController(interview_service)
+
+
+@router.post(
+    "",
+    status_code=status.HTTP_201_CREATED,
+    summary="Schedule a new interview",
+    description="Schedule an interview session for a candidate with round number, date, time, interviewer, and meeting details.",
+)
+async def create_interview(
+    payload: InterviewCreateRequest,
+    current_user: dict = Depends(get_current_active_user),
+    controller: InterviewController = Depends(get_interview_controller),
+):
+    return await controller.create_interview(payload, user_id=current_user["id"])
+
+
+@router.get(
+    "",
+    status_code=status.HTTP_200_OK,
+    summary="List and filter interviews",
+    description="Retrieve paginated and filtered list of interviews.",
+)
+async def list_interviews(
+    candidate_id: Optional[str] = Query(None, description="Filter by Candidate ID"),
+    interviewer_id: Optional[str] = Query(None, description="Filter by Interviewer ID"),
+    status_val: Optional[InterviewStatus] = Query(None, alias="status", description="Filter by Interview Status"),
+    interview_type: Optional[InterviewType] = Query(None, description="Filter by Interview Type"),
+    job_title: Optional[str] = Query(None, description="Filter by Job Title"),
+    date_from: Optional[str] = Query(None, description="Filter scheduled_date >= date_from (YYYY-MM-DD)"),
+    date_to: Optional[str] = Query(None, description="Filter scheduled_date <= date_to (YYYY-MM-DD)"),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=500),
+    current_user: dict = Depends(get_current_active_user_optional),
+    controller: InterviewController = Depends(get_interview_controller),
+):
+    return await controller.list_interviews(
+        candidate_id=candidate_id,
+        interviewer_id=interviewer_id,
+        status=status_val,
+        interview_type=interview_type,
+        job_title=job_title,
+        date_from=date_from,
+        date_to=date_to,
+        skip=skip,
+        limit=limit,
+    )
+
+
+@router.get(
+    "/{interview_id}",
+    status_code=status.HTTP_200_OK,
+    summary="Get interview details",
+    description="Retrieve specific interview details by ID.",
+)
+async def get_interview(
+    interview_id: str,
+    current_user: dict = Depends(get_current_active_user_optional),
+    controller: InterviewController = Depends(get_interview_controller),
+):
+    return await controller.get_interview(interview_id)
+
+
+@router.put(
+    "/{interview_id}",
+    status_code=status.HTTP_200_OK,
+    summary="Update interview details",
+    description="Update fields of an existing interview.",
+)
+async def update_interview(
+    interview_id: str,
+    payload: InterviewUpdateRequest,
+    current_user: dict = Depends(get_current_active_user),
+    controller: InterviewController = Depends(get_interview_controller),
+):
+    return await controller.update_interview(interview_id, payload, user_id=current_user["id"])
+
+
+@router.post(
+    "/{interview_id}/reschedule",
+    status_code=status.HTTP_200_OK,
+    summary="Reschedule interview",
+    description="Reschedule an existing interview session to a new date/time.",
+)
+async def reschedule_interview(
+    interview_id: str,
+    payload: InterviewRescheduleRequest,
+    current_user: dict = Depends(get_current_active_user),
+    controller: InterviewController = Depends(get_interview_controller),
+):
+    return await controller.reschedule_interview(interview_id, payload, user_id=current_user["id"])
+
+
+@router.post(
+    "/{interview_id}/feedback",
+    status_code=status.HTTP_200_OK,
+    summary="Submit interview feedback and rating",
+    description="Submit rating score, feedback, strengths, weaknesses, and hiring recommendation.",
+)
+async def submit_feedback(
+    interview_id: str,
+    payload: InterviewFeedbackRequest,
+    current_user: dict = Depends(get_current_active_user),
+    controller: InterviewController = Depends(get_interview_controller),
+):
+    return await controller.submit_feedback(interview_id, payload, user_id=current_user["id"])
+
+
+@router.delete(
+    "/{interview_id}",
+    status_code=status.HTTP_200_OK,
+    summary="Delete/cancel interview",
+    description="Remove interview record from the database.",
+)
+async def delete_interview(
+    interview_id: str,
+    current_user: dict = Depends(get_current_active_user),
+    controller: InterviewController = Depends(get_interview_controller),
+):
+    return await controller.delete_interview(interview_id)

@@ -4,6 +4,7 @@ export const RESUME_UPLOAD = `${BASE_URL}/resumes/upload`;
 export const RESUME_LIST = `${BASE_URL}/resumes`;
 export const RESUME_MATCH = `${BASE_URL}/resumes/match`;
 export const RESUME_PARSED_SUMMARY = `${BASE_URL}/resumes/parsed-summary`;
+export const INTERVIEWS_URL = `${BASE_URL}/interviews`;
 
 export const AUTH_LOGIN = `${BASE_URL}/auth/login`;
 export const AUTH_REGISTER = `${BASE_URL}/auth/register`;
@@ -211,6 +212,299 @@ export const getResumeById = async (resumeId: string) => {
 
   if (!response.ok) {
     throw new Error(resData.detail || "Failed to fetch resume details");
+  }
+
+  return resData.data || resData;
+};
+
+export const updateResume = async (resumeId: string, updateData: any) => {
+  const token = localStorage.getItem("access_token") || "";
+  const response = await fetch(`${RESUME_LIST}/${resumeId}`, {
+    method: "PUT",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(updateData),
+  });
+
+  const resData = await response.json();
+  handleAuthError(response, resData);
+
+  if (!response.ok) {
+    throw new Error(resData.detail || "Failed to update resume");
+  }
+
+  return resData.data || resData;
+};
+
+// INTERVIEW INTERFACES & API FUNCTIONS
+export type InterviewTypeEnum =
+  | "TECHNICAL"
+  | "HR"
+  | "MANAGERIAL"
+  | "CULTURE_FIT"
+  | "FINAL_ROUND"
+  | "INITIAL_SCREENING";
+
+export type InterviewStatusEnum =
+  | "PENDING"
+  | "SCHEDULED"
+  | "COMPLETED"
+  | "CANCELLED"
+  | "RESCHEDULED"
+  | "NO_SHOW";
+
+export interface InterviewItem {
+  id: string;
+  candidate_id: string;
+  candidate_name: string;
+  resume_id?: string;
+  job_id?: string;
+  job_title: string;
+  interview_type: InterviewTypeEnum;
+  round_number: number;
+  scheduled_date: string;
+  scheduled_time: string;
+  timezone: string;
+  duration_minutes: number;
+  interviewer_id?: string;
+  interviewer_name: string;
+  interviewer_email?: string;
+  meeting_link?: string;
+  meeting_platform?: string;
+  status: InterviewStatusEnum;
+  rating?: number;
+  feedback?: string;
+  strengths?: string[];
+  weaknesses?: string[];
+  recommendation?: string;
+  notes?: string;
+  reschedule_history?: any[];
+  created_by?: string;
+  updated_by?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateInterviewPayload {
+  candidate_id: string;
+  candidate_name: string;
+  resume_id?: string;
+  job_id?: string;
+  job_title: string;
+  interview_type?: InterviewTypeEnum;
+  round_number?: number;
+  scheduled_date: string;
+  scheduled_time: string;
+  timezone?: string;
+  duration_minutes?: number;
+  interviewer_id?: string;
+  interviewer_name: string;
+  interviewer_email?: string;
+  meeting_link?: string;
+  meeting_platform?: string;
+  notes?: string;
+}
+
+export interface UpdateInterviewPayload {
+  candidate_name?: string;
+  job_title?: string;
+  interview_type?: InterviewTypeEnum;
+  round_number?: number;
+  scheduled_date?: string;
+  scheduled_time?: string;
+  timezone?: string;
+  duration_minutes?: number;
+  interviewer_id?: string;
+  interviewer_name?: string;
+  interviewer_email?: string;
+  meeting_link?: string;
+  meeting_platform?: string;
+  status?: InterviewStatusEnum;
+  notes?: string;
+}
+
+export interface RescheduleInterviewPayload {
+  scheduled_date: string;
+  scheduled_time: string;
+  timezone?: string;
+  duration_minutes?: number;
+  reason?: string;
+}
+
+export interface SubmitFeedbackPayload {
+  rating: number;
+  feedback: string;
+  strengths?: string[];
+  weaknesses?: string[];
+  recommendation?: string;
+  notes?: string;
+}
+
+export const getInterviews = async (params: {
+  candidate_id?: string;
+  interviewer_id?: string;
+  status?: string;
+  interview_type?: string;
+  job_title?: string;
+  date_from?: string;
+  date_to?: string;
+  skip?: number;
+  limit?: number;
+} = {}) => {
+  const token = localStorage.getItem("access_token") || "";
+  const queryParts: string[] = [];
+
+  if (params.candidate_id) queryParts.push(`candidate_id=${encodeURIComponent(params.candidate_id)}`);
+  if (params.interviewer_id) queryParts.push(`interviewer_id=${encodeURIComponent(params.interviewer_id)}`);
+  if (params.status) queryParts.push(`status=${encodeURIComponent(params.status)}`);
+  if (params.interview_type) queryParts.push(`interview_type=${encodeURIComponent(params.interview_type)}`);
+  if (params.job_title) queryParts.push(`job_title=${encodeURIComponent(params.job_title)}`);
+  if (params.date_from) queryParts.push(`date_from=${encodeURIComponent(params.date_from)}`);
+  if (params.date_to) queryParts.push(`date_to=${encodeURIComponent(params.date_to)}`);
+  if (params.skip !== undefined) queryParts.push(`skip=${params.skip}`);
+  if (params.limit !== undefined) queryParts.push(`limit=${params.limit}`);
+
+  const queryString = queryParts.length > 0 ? `?${queryParts.join("&")}` : "";
+
+  const response = await fetch(`${INTERVIEWS_URL}${queryString}`, {
+    method: "GET",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  const resData = await response.json();
+  handleAuthError(response, resData);
+
+  if (!response.ok) {
+    throw new Error(resData.detail || "Failed to fetch interviews");
+  }
+
+  return resData.data || resData;
+};
+
+export const createInterview = async (payload: CreateInterviewPayload) => {
+  const token = localStorage.getItem("access_token") || "";
+  const response = await fetch(`${INTERVIEWS_URL}`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const resData = await response.json();
+  handleAuthError(response, resData);
+
+  if (!response.ok) {
+    throw new Error(resData.detail || "Failed to schedule interview");
+  }
+
+  return resData.data || resData;
+};
+
+export const getInterviewById = async (interviewId: string) => {
+  const token = localStorage.getItem("access_token") || "";
+  const response = await fetch(`${INTERVIEWS_URL}/${interviewId}`, {
+    method: "GET",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  const resData = await response.json();
+  handleAuthError(response, resData);
+
+  if (!response.ok) {
+    throw new Error(resData.detail || "Failed to fetch interview details");
+  }
+
+  return resData.data || resData;
+};
+
+export const updateInterview = async (interviewId: string, payload: UpdateInterviewPayload) => {
+  const token = localStorage.getItem("access_token") || "";
+  const response = await fetch(`${INTERVIEWS_URL}/${interviewId}`, {
+    method: "PUT",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const resData = await response.json();
+  handleAuthError(response, resData);
+
+  if (!response.ok) {
+    throw new Error(resData.detail || "Failed to update interview");
+  }
+
+  return resData.data || resData;
+};
+
+export const rescheduleInterview = async (interviewId: string, payload: RescheduleInterviewPayload) => {
+  const token = localStorage.getItem("access_token") || "";
+  const response = await fetch(`${INTERVIEWS_URL}/${interviewId}/reschedule`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const resData = await response.json();
+  handleAuthError(response, resData);
+
+  if (!response.ok) {
+    throw new Error(resData.detail || "Failed to reschedule interview");
+  }
+
+  return resData.data || resData;
+};
+
+export const submitInterviewFeedback = async (interviewId: string, payload: SubmitFeedbackPayload) => {
+  const token = localStorage.getItem("access_token") || "";
+  const response = await fetch(`${INTERVIEWS_URL}/${interviewId}/feedback`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const resData = await response.json();
+  handleAuthError(response, resData);
+
+  if (!response.ok) {
+    throw new Error(resData.detail || "Failed to submit interview feedback");
+  }
+
+  return resData.data || resData;
+};
+
+export const deleteInterview = async (interviewId: string) => {
+  const token = localStorage.getItem("access_token") || "";
+  const response = await fetch(`${INTERVIEWS_URL}/${interviewId}`, {
+    method: "DELETE",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  const resData = await response.json();
+  handleAuthError(response, resData);
+
+  if (!response.ok) {
+    throw new Error(resData.detail || "Failed to delete interview");
   }
 
   return resData.data || resData;

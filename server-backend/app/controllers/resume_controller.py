@@ -4,6 +4,7 @@ Resume controller handling HTTP requests for resume upload, retrieval, text extr
 
 from fastapi import UploadFile, status, BackgroundTasks
 from fastapi.responses import JSONResponse
+from app.schemas.resume import ResumeUpdateRequest
 from app.services.resume_service import ResumeService
 from app.utils.response import success_response
 
@@ -68,6 +69,14 @@ class ResumeController:
         return success_response(
             data=resume_response.model_dump(),
             message="Resume retrieved successfully.",
+        )
+
+    async def update_resume(self, resume_id: str, update_payload: ResumeUpdateRequest, user_id: str, is_admin: bool = False) -> JSONResponse:
+        """Process request to update resume fields and append HR update."""
+        resume_response = await self.resume_service.update_resume(resume_id, user_id, update_payload, is_admin=is_admin)
+        return success_response(
+            data=resume_response.model_dump(),
+            message="Resume updated successfully.",
         )
 
     async def extract_text(self, resume_id: str, user_id: str, is_admin: bool = False) -> JSONResponse:
