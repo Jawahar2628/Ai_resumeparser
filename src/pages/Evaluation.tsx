@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
-  ArrowLeft, Bell, Settings, Mail, Phone, MapPin, ChevronDown, CheckCircle2,
+  ArrowLeft, Mail, Phone, MapPin, ChevronDown, CheckCircle2,
   ExternalLink, User, Award, Brain, Briefcase, GraduationCap, Code, Edit3, X, Save
 } from "lucide-react";
 import { getResumeById, getResumes, updateResume } from "../utils/Api";
@@ -687,6 +687,21 @@ export default function Evaluation() {
                   <div className="flex justify-between items-center bg-[#030514] p-3 rounded-xl border border-slate-800">
                     <span className="text-slate-400 font-medium">Job Hopping Risk</span>
                     <span className="font-bold text-amber-400">{careerAnalysis.job_hopping_risk || "N/A"}</span>
+                  </div>
+
+                  <div className="bg-[#030514] p-3 rounded-xl border border-slate-800 space-y-1.5">
+                    <span className="text-slate-400 font-semibold block text-[11px]">Skill Strengths</span>
+                    {originalSkillStrengths && originalSkillStrengths.length > 0 ? (
+                      <div className="flex flex-wrap gap-1.5">
+                        {originalSkillStrengths.map((item: string, i: number) => (
+                          <span key={i} className="bg-emerald-950/70 text-emerald-300 border border-emerald-800/50 text-[11px] px-2 py-0.5 rounded-md font-medium">
+                            {item}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-slate-500 text-[11px]">None flagged</span>
+                    )}
                   </div>
 
                   <div className="bg-[#030514] p-3 rounded-xl border border-slate-800 space-y-1.5">
