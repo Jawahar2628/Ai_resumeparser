@@ -1,21 +1,40 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Bell, Settings, Mail, Phone, MapPin, ChevronDown, CheckCircle2, ExternalLink, User, Award, Brain, Briefcase, GraduationCap, Code } from "lucide-react";
-import { getResumeById } from "../utils/Api";
+import { getResumeById, getResumes } from "../utils/Api";
 
 export default function Evaluation() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [candidate, setCandidate] = useState<any>(null);
+  const [resumesList, setResumesList] = useState<any[]>([]);
+  const [selectedResumeId, setSelectedResumeId] = useState<string>(id || "");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("Experience");
 
+  // Fetch list of resumes to populate candidate dropdown
   useEffect(() => {
-    if (id) {
+    getResumes()
+      .then((data) => {
+        const list = Array.isArray(data) ? data : data?.resumes || [];
+        setResumesList(list);
+        if (!id && list.length > 0) {
+          setSelectedResumeId(list[0].id);
+        }
+      })
+      .catch((err) => {
+        console.error("Error fetching resumes dropdown list:", err);
+      });
+  }, []);
+
+  // Fetch candidate details whenever selectedResumeId changes
+  useEffect(() => {
+    const targetId = selectedResumeId || id;
+    if (targetId) {
       setLoading(true);
       setError(null);
-      getResumeById(id)
+      getResumeById(targetId)
         .then((data) => {
           setCandidate(data);
           setLoading(false);
@@ -29,7 +48,7 @@ export default function Evaluation() {
       setLoading(false);
       setError("No candidate ID specified in route.");
     }
-  }, [id]);
+  }, [selectedResumeId, id]);
 
   if (loading) {
     return (
@@ -105,12 +124,45 @@ export default function Evaluation() {
   return (
     <div className="bg-[#030514] text-slate-100 min-h-screen p-6 rounded-2xl space-y-6 font-sans">
       {/* Top Bar Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-3">
           <h1 className="text-xl font-bold text-slate-100">Candidate Profile</h1>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+          {/* Candidate Dropdown displaying full_name, email, phone */}
+          <div className="relative flex-1 sm:flex-initial min-w-[260px] max-w-[420px]">
+            <select
+              value={candidate?.id || selectedResumeId}
+              onChange={(e) => {
+                const newId = e.target.value;
+                setSelectedResumeId(newId);
+                navigate(`/evaluation/${newId}`, { replace: true });
+              }}
+              className="w-full bg-[#0b0f29] border border-indigo-500/40 text-slate-200 text-xs rounded-xl px-3 py-2 pr-8 appearance-none focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer shadow-sm font-medium"
+            >
+              {resumesList.length === 0 && (
+                <option value="" disabled>No candidates available</option>
+              )}
+              {resumesList.map((res: any) => {
+                const resParsed = res.parsed_data || {};
+                const fullName = resParsed.full_name || resParsed.name || res.original_filename || "Candidate";
+                const resEmail = resParsed.email ? resParsed.email.replace(/\s+/g, "") : "";
+                const resPhone = resParsed.phone || "";
+                
+                const detailsStr = [resEmail, resPhone].filter(Boolean).join(" • ");
+                const label = detailsStr ? `${fullName} (${detailsStr})` : fullName;
+
+                return (
+                  <option key={res.id} value={res.id} className="bg-[#030514] text-slate-200 py-1">
+                    {label}
+                  </option>
+                );
+              })}
+            </select>
+            <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-indigo-400 pointer-events-none" />
+          </div>
+
           <button className="p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-900 rounded-lg transition-colors border border-slate-800">
             <Bell size={18} />
           </button>

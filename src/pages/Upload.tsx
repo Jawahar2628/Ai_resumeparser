@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { UploadCloud, FileText, CheckCircle2, Loader2, X, User, Briefcase, GraduationCap, Award, Code, FolderGit2, ExternalLink } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import { RESUME_UPLOAD, RESUME_LIST } from "../utils/Api";
 
 export default function Upload() {
@@ -11,8 +10,6 @@ export default function Upload() {
   const [parsedResponse, setParsedResponse] = useState<any>(null);
   const [showModal, setShowModal] = useState(false);
   const [activeTab, setActiveTab] = useState<string>("personal");
-
-  const navigate = useNavigate();
 
   const steps = [
     { number: 1, title: "Upload", active: true },
@@ -79,35 +76,35 @@ export default function Upload() {
 
       const initialResult = resData.data || resData;
       const resumeId = initialResult.id;
-      
+
       let finalResult = initialResult;
       let currentStatus = (initialResult.status || "").toLowerCase();
       let attempts = 0;
-      
+
       while (currentStatus === "pending" && attempts < 60) {
         await new Promise(resolve => setTimeout(resolve, 5000));
         attempts++;
-        
+
         const statusRes = await fetch(`${RESUME_LIST}/${resumeId}`, {
           method: 'GET',
           headers
         });
-        
+
         const statusData = await statusRes.json();
         if (!statusRes.ok) {
           throw new Error(statusData.detail || "Failed to check status.");
         }
-        
+
         finalResult = statusData.data || statusData;
         currentStatus = (finalResult.status || "").toLowerCase();
-        
+
         if (currentStatus === "failed" || currentStatus === "error") {
           throw new Error("AI Parsing failed on the backend.");
         }
       }
-      
+
       if (currentStatus === "pending") {
-         throw new Error("Parsing timed out after 5 minutes.");
+        throw new Error("Parsing timed out after 5 minutes.");
       }
 
       setIsParsing(false);
@@ -383,11 +380,10 @@ export default function Upload() {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold transition-all whitespace-nowrap ${
-                      activeTab === tab.id
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold transition-all whitespace-nowrap ${activeTab === tab.id
                         ? "bg-blue-600 text-white shadow-md"
                         : "text-slate-400 hover:text-slate-200 hover:bg-slate-900"
-                    }`}
+                      }`}
                   >
                     <Icon size={14} />
                     {tab.label}
@@ -516,7 +512,7 @@ export default function Upload() {
               {activeTab === "evaluation" && (
                 <div className="space-y-6">
                   <h4 className="text-sm font-bold text-blue-400 uppercase tracking-wider">AI Insight & Evaluation</h4>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <div className="bg-[#030514] border border-blue-900/50 p-4 rounded-xl flex flex-col items-center justify-center text-center">
                       <span className="text-xs font-bold text-slate-400 mb-1">AI Technical Score</span>
