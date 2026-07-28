@@ -5,6 +5,10 @@ from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks, D
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from sqlalchemy.orm import Session
+import logging
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 # Load environment variables from .env file
 load_dotenv()
@@ -30,6 +34,9 @@ def _process_resume_task(job_id: int, file_path: str):
     # Use a new DB session for the background task
     from database import SessionLocal
     db = SessionLocal()
+    
+    logger.info(f"[Job {job_id}] Starting background task for file: {file_path}")
+    
     try:
         initial_state = {
             "file_path": file_path,
@@ -40,25 +47,30 @@ def _process_resume_task(job_id: int, file_path: str):
             "error": ""
         }
         
+        logger.info(f"[Job {job_id}] Invoking LangGraph workflow...")
         result = app_graph.invoke(initial_state)
+        logger.info(f"[Job {job_id}] Graph execution finished. Final status: {result.get('status')}")
         
         candidate = db.query(CandidateDB).filter(CandidateDB.id == job_id).first()
         if candidate:
             if result.get("error"):
+                logger.error(f"[Job {job_id}] Workflow returned an error: {result['error']}")
                 candidate.status = "error"
                 candidate.evaluation = {"error": result["error"]}
             else:
+                logger.info(f"[Job {job_id}] Workflow completed successfully.")
                 candidate.status = "completed"
                 candidate.parsed_resume = result.get("parsed_resume", {})
                 candidate.evaluation = result.get("evaluation", {})
             db.commit()
             
     except Exception as e:
-        traceback.print_exc()
+        error_trace = traceback.format_exc()
+        logger.error(f"[Job {job_id}] Uncaught exception during graph execution:\n{error_trace}")
         candidate = db.query(CandidateDB).filter(CandidateDB.id == job_id).first()
         if candidate:
             candidate.status = "error"
-            candidate.evaluation = {"error": str(e)}
+            candidate.evaluation = {"error": str(e), "traceback": error_trace}
             db.commit()
     finally:
         db.close()
