@@ -1,0 +1,63 @@
+name: Deploy Resume Parser Frontend
+
+on:
+  push:
+    branches:
+      - development
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Frontend
+        env:
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+        run: |
+          echo "API URL: $VITE_API_BASE_URL"
+          npm run build
+
+      - name: Verify Build
+        run: |
+          ls -la dist
+          find dist -maxdepth 2 -type f | head -30
+
+      - name: Deploy Frontend
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: 22
+          source: "dist/*"
+          target: "/var/www/resumeparser"
+          strip_components: 1
+          overwrite: true
+          rm: true
+
+      - name: Set Permissions & Reload Nginx
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: 22
+          script: |
+            sudo chown -R www-data:www-data /var/www/resumeparser
+            sudo find /var/www/resumeparser -type d -exec chmod 755 {} \;
+            sudo find /var/www/resumeparser -type f -exec chmod 644 {} \;
+
+            sudo nginx -t
+            sudo systemctl reload nginx
