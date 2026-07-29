@@ -3,7 +3,7 @@ name: Deploy Resume Parser Backend
 on:
   push:
     branches:
-      - dev-prod
+      - development
 
 jobs:
   deploy:
