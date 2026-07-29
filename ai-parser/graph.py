@@ -147,27 +147,70 @@ def evaluate_candidate_node(state: GraphState):
     except Exception as e:
         return {"error": str(e), "status": "failed_evaluation"}
 
+# Single Node: Parse Entire Resume (Alternative to Nodes 2-5)
+def parse_entire_resume_node(state: GraphState):
+    if state.get("error"): return state
+    try:
+        llm = get_llm()
+        parser = JsonOutputParser(pydantic_object=ResumeSchema)
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", "Extract all candidate information from the resume text into the required format. Ensure all sections are properly populated.\n{format_instructions}"),
+            ("user", "Resume Text:\n{resume_text}")
+        ])
+        chain = prompt | llm | parser
+        result = chain.invoke({
+            "resume_text": state["raw_text"],
+            "format_instructions": parser.get_format_instructions()
+        })
+        parsed = state.get("parsed_resume", {})
+        parsed.update(result)
+        return {"parsed_resume": parsed, "status": "resume_parsed"}
+    except Exception as e:
+        return {"error": f"Single Parse Error: {str(e)}", "status": "failed_parsing"}
+
 def build_resume_parser_graph():
     workflow = StateGraph(GraphState)
     
     workflow.add_node("extract_text", extract_text_node)
+    
+    # Multi-step nodes
     workflow.add_node("parse_basic_info", parse_basic_info_node)
     workflow.add_node("parse_work_experience", parse_work_experience_node)
     workflow.add_node("parse_projects", parse_projects_node)
     workflow.add_node("parse_education", parse_education_node)
+    
+    # Single-step node
+    workflow.add_node("parse_entire_resume", parse_entire_resume_node)
+    
     workflow.add_node("evaluate_candidate", evaluate_candidate_node)
     
     workflow.set_entry_point("extract_text")
     
+    def check_error_and_route_extract(state: GraphState):
+        if state.get("error"): return "end"
+        mode = os.getenv("PARSE_MODE", "multi").lower()
+        if mode == "single":
+            return "single_parse"
+        return "multi_parse"
+        
     def check_error(state: GraphState):
         if state.get("error"): return "end"
         return "continue"
         
-    workflow.add_conditional_edges("extract_text", check_error, {"continue": "parse_basic_info", "end": END})
+    workflow.add_conditional_edges("extract_text", check_error_and_route_extract, {
+        "multi_parse": "parse_basic_info",
+        "single_parse": "parse_entire_resume",
+        "end": END
+    })
+    
+    # Multi-step edges
     workflow.add_conditional_edges("parse_basic_info", check_error, {"continue": "parse_work_experience", "end": END})
     workflow.add_conditional_edges("parse_work_experience", check_error, {"continue": "parse_projects", "end": END})
     workflow.add_conditional_edges("parse_projects", check_error, {"continue": "parse_education", "end": END})
     workflow.add_conditional_edges("parse_education", check_error, {"continue": "evaluate_candidate", "end": END})
+    
+    # Single-step edges
+    workflow.add_conditional_edges("parse_entire_resume", check_error, {"continue": "evaluate_candidate", "end": END})
     
     workflow.add_edge("evaluate_candidate", END)
     
