@@ -8,6 +8,7 @@ from app.core.exceptions import NotFoundError
 from app.models.interview import InterviewDocument
 from app.repositories.interview_repository import InterviewRepository
 from app.schemas.interview import (
+    InterviewBatchCreateRequest,
     InterviewCreateRequest,
     InterviewFeedbackRequest,
     InterviewListResponse,
@@ -33,6 +34,8 @@ class InterviewService:
             resume_id=payload.resume_id,
             job_id=payload.job_id,
             job_title=payload.job_title,
+            job_location=payload.job_location,
+            job_type=payload.job_type,
             interview_type=payload.interview_type,
             round_number=payload.round_number,
             scheduled_date=payload.scheduled_date,
@@ -44,6 +47,18 @@ class InterviewService:
             interviewer_email=payload.interviewer_email,
             meeting_link=payload.meeting_link,
             meeting_platform=payload.meeting_platform,
+            location=payload.location or payload.interview_location,
+            interview_location=payload.interview_location or payload.location,
+            hr_call_verification=payload.hr_call_verification,
+            candidate_requested_date_time=payload.candidate_requested_date_time,
+            candidate_requested_date=payload.candidate_requested_date,
+            candidate_requested_time=payload.candidate_requested_time,
+            candidate_requested_role=payload.candidate_requested_role,
+            salary_requested=payload.salary_requested,
+            final_fit_salary=payload.final_fit_salary,
+            joining_date=payload.joining_date,
+            interview_document_files=payload.interview_document_files,
+            recommendation=payload.recommendation or "Pending",
             status=InterviewStatus.SCHEDULED,
             notes=payload.notes,
             created_by=created_by,
@@ -53,6 +68,57 @@ class InterviewService:
         created = await self.interview_repo.create(interview_doc.to_dict())
         logger.info(f"Scheduled new interview ID '{interview_doc.id}' for candidate '{payload.candidate_name}'")
         return InterviewResponse.model_validate(created)
+
+    async def batch_create_interviews(
+        self, payload: InterviewBatchCreateRequest, created_by: Optional[str] = None
+    ) -> List[InterviewResponse]:
+        """Batch schedule interviews for multiple candidates globally."""
+        created_interviews: List[InterviewResponse] = []
+
+        for candidate in payload.candidates:
+            loc = candidate.interview_location or candidate.location or payload.interview_location or payload.location
+            interview_doc = InterviewDocument(
+                candidate_id=candidate.candidate_id,
+                candidate_name=candidate.candidate_name,
+                resume_id=candidate.resume_id,
+                job_id=payload.job_id,
+                job_title=payload.job_title,
+                job_location=payload.job_location,
+                job_type=payload.job_type,
+                interview_type=payload.interview_type,
+                round_number=payload.round_number,
+                scheduled_date=payload.scheduled_date,
+                scheduled_time=payload.scheduled_time,
+                timezone=payload.timezone,
+                duration_minutes=payload.duration_minutes,
+                interviewer_id=payload.interviewer_id,
+                interviewer_name=payload.interviewer_name,
+                interviewer_email=payload.interviewer_email,
+                meeting_link=payload.meeting_link,
+                meeting_platform=payload.meeting_platform,
+                location=loc,
+                interview_location=loc,
+                hr_call_verification=payload.hr_call_verification,
+                candidate_requested_date_time=payload.candidate_requested_date_time,
+                candidate_requested_date=payload.candidate_requested_date,
+                candidate_requested_time=payload.candidate_requested_time,
+                candidate_requested_role=payload.candidate_requested_role,
+                salary_requested=payload.salary_requested,
+                final_fit_salary=payload.final_fit_salary,
+                joining_date=payload.joining_date,
+                interview_document_files=payload.interview_document_files,
+                recommendation=payload.recommendation or "Pending",
+                status=InterviewStatus.SCHEDULED,
+                notes=payload.notes,
+                created_by=created_by,
+                updated_by=created_by,
+            )
+
+            created = await self.interview_repo.create(interview_doc.to_dict())
+            created_interviews.append(InterviewResponse.model_validate(created))
+
+        logger.info(f"Batch scheduled {len(created_interviews)} interviews for job '{payload.job_title}'")
+        return created_interviews
 
     async def get_interview_by_id(self, interview_id: str) -> InterviewResponse:
         """Fetch details for a single interview by ID."""
@@ -171,6 +237,13 @@ class InterviewService:
             recommendation=payload.recommendation,
             notes=payload.notes,
             updated_by=updated_by,
+            candidate_requested_date=payload.candidate_requested_date,
+            candidate_requested_time=payload.candidate_requested_time,
+            candidate_requested_role=payload.candidate_requested_role,
+            salary_requested=payload.salary_requested,
+            final_fit_salary=payload.final_fit_salary,
+            joining_date=payload.joining_date,
+            interview_document_files=payload.interview_document_files,
         )
 
         logger.info(f"Submitted feedback for interview ID '{interview_id}' with rating {payload.rating}")

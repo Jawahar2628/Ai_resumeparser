@@ -22,6 +22,8 @@ class InterviewDocument(BaseModel):
     # Job Information
     job_id: Optional[str] = None
     job_title: str
+    job_location: Optional[str] = None
+    job_type: Optional[str] = None  # Full Time / Part Time / Contract / Remote / Hybrid
 
     # Interview Details
     interview_type: InterviewType
@@ -41,6 +43,23 @@ class InterviewDocument(BaseModel):
     # Meeting Details
     meeting_link: Optional[str] = None
     meeting_platform: Optional[str] = None  # Google Meet / Zoom / Teams
+
+    # Location & Verification
+    location: Optional[str] = None
+    interview_location: Optional[str] = None
+    hr_call_verification: Optional[str] = "Pending"
+
+    # Requested & Salary / Joining Details
+    candidate_requested_date_time: Optional[str] = None
+    candidate_requested_date: Optional[str] = None
+    candidate_requested_time: Optional[str] = None
+    candidate_requested_role: Optional[str] = None
+    salary_requested: Optional[str] = None
+    final_fit_salary: Optional[str] = None
+    joining_date: Optional[str] = None
+
+    # Documents Attached
+    interview_document_files: List[str] = Field(default_factory=list)
 
     # Status
     status: InterviewStatus = InterviewStatus.PENDING

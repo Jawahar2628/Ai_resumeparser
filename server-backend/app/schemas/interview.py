@@ -16,6 +16,8 @@ class InterviewCreateRequest(BaseModel):
 
     job_id: Optional[str] = None
     job_title: str
+    job_location: Optional[str] = None
+    job_type: Optional[str] = None
 
     interview_type: InterviewType = InterviewType.TECHNICAL
     round_number: int = 1
@@ -32,6 +34,71 @@ class InterviewCreateRequest(BaseModel):
     meeting_link: Optional[str] = None
     meeting_platform: Optional[str] = "Google Meet"
 
+    location: Optional[str] = None
+    interview_location: Optional[str] = None
+    hr_call_verification: Optional[str] = "Pending"
+    candidate_requested_date_time: Optional[str] = None
+    candidate_requested_date: Optional[str] = None
+    candidate_requested_time: Optional[str] = None
+    candidate_requested_role: Optional[str] = None
+    salary_requested: Optional[str] = None
+    final_fit_salary: Optional[str] = None
+    joining_date: Optional[str] = None
+    interview_document_files: List[str] = Field(default_factory=list)
+    recommendation: Optional[str] = "Pending"  # Selected / Rejected / Pending / Hold
+
+    notes: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CandidateInterviewItem(BaseModel):
+    """Candidate info for batch interview scheduling."""
+
+    candidate_id: str
+    candidate_name: str
+    resume_id: Optional[str] = None
+    location: Optional[str] = None
+    interview_location: Optional[str] = None
+
+
+class InterviewBatchCreateRequest(BaseModel):
+    """Payload for scheduling interviews in batch for multiple candidates."""
+
+    candidates: List[CandidateInterviewItem]
+    job_id: Optional[str] = None
+    job_title: str
+    job_location: Optional[str] = None
+    job_type: Optional[str] = None
+
+    interview_type: InterviewType = InterviewType.TECHNICAL
+    round_number: int = 1
+
+    scheduled_date: str
+    scheduled_time: str
+    timezone: str = "Asia/Kolkata"
+    duration_minutes: int = 60
+
+    interviewer_id: Optional[str] = None
+    interviewer_name: str
+    interviewer_email: Optional[str] = None
+
+    meeting_link: Optional[str] = None
+    meeting_platform: Optional[str] = "Google Meet"
+
+    location: Optional[str] = None
+    interview_location: Optional[str] = None
+    hr_call_verification: Optional[str] = "Pending"
+    candidate_requested_date_time: Optional[str] = None
+    candidate_requested_date: Optional[str] = None
+    candidate_requested_time: Optional[str] = None
+    candidate_requested_role: Optional[str] = None
+    salary_requested: Optional[str] = None
+    final_fit_salary: Optional[str] = None
+    joining_date: Optional[str] = None
+    interview_document_files: List[str] = Field(default_factory=list)
+    recommendation: Optional[str] = "Pending"
+
     notes: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
@@ -42,6 +109,8 @@ class InterviewUpdateRequest(BaseModel):
 
     candidate_name: Optional[str] = None
     job_title: Optional[str] = None
+    job_location: Optional[str] = None
+    job_type: Optional[str] = None
     interview_type: Optional[InterviewType] = None
     round_number: Optional[int] = None
 
@@ -56,6 +125,19 @@ class InterviewUpdateRequest(BaseModel):
 
     meeting_link: Optional[str] = None
     meeting_platform: Optional[str] = None
+
+    location: Optional[str] = None
+    interview_location: Optional[str] = None
+    hr_call_verification: Optional[str] = None
+    candidate_requested_date_time: Optional[str] = None
+    candidate_requested_date: Optional[str] = None
+    candidate_requested_time: Optional[str] = None
+    candidate_requested_role: Optional[str] = None
+    salary_requested: Optional[str] = None
+    final_fit_salary: Optional[str] = None
+    joining_date: Optional[str] = None
+    interview_document_files: Optional[List[str]] = None
+    recommendation: Optional[str] = None
 
     status: Optional[InterviewStatus] = None
     notes: Optional[str] = None
@@ -82,8 +164,17 @@ class InterviewFeedbackRequest(BaseModel):
     feedback: str
     strengths: List[str] = Field(default_factory=list)
     weaknesses: List[str] = Field(default_factory=list)
-    recommendation: Optional[str] = None  # Selected / Rejected / Next Round / Hold
+    recommendation: Optional[str] = None  # Selected / Rejected / Pending / Hold
     notes: Optional[str] = None
+
+    # Extensible fields updated during feedback/outcome phase
+    candidate_requested_date: Optional[str] = None
+    candidate_requested_time: Optional[str] = None
+    candidate_requested_role: Optional[str] = None
+    salary_requested: Optional[str] = None
+    final_fit_salary: Optional[str] = None
+    joining_date: Optional[str] = None
+    interview_document_files: List[str] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -98,6 +189,8 @@ class InterviewResponse(BaseModel):
 
     job_id: Optional[str] = None
     job_title: str
+    job_location: Optional[str] = None
+    job_type: Optional[str] = None
 
     interview_type: InterviewType
     round_number: int
@@ -113,6 +206,18 @@ class InterviewResponse(BaseModel):
 
     meeting_link: Optional[str] = None
     meeting_platform: Optional[str] = None
+
+    location: Optional[str] = None
+    interview_location: Optional[str] = None
+    hr_call_verification: Optional[str] = "Pending"
+    candidate_requested_date_time: Optional[str] = None
+    candidate_requested_date: Optional[str] = None
+    candidate_requested_time: Optional[str] = None
+    candidate_requested_role: Optional[str] = None
+    salary_requested: Optional[str] = None
+    final_fit_salary: Optional[str] = None
+    joining_date: Optional[str] = None
+    interview_document_files: List[str] = Field(default_factory=list)
 
     status: InterviewStatus
 

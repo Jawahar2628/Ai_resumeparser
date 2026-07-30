@@ -134,6 +134,13 @@ class InterviewRepository(BaseRepository):
         recommendation: Optional[str] = None,
         notes: Optional[str] = None,
         updated_by: Optional[str] = None,
+        candidate_requested_date: Optional[str] = None,
+        candidate_requested_time: Optional[str] = None,
+        candidate_requested_role: Optional[str] = None,
+        salary_requested: Optional[str] = None,
+        final_fit_salary: Optional[str] = None,
+        joining_date: Optional[str] = None,
+        interview_document_files: Optional[List[str]] = None,
     ) -> Optional[Dict[str, Any]]:
         """Update feedback and rating for an interview document."""
         update_data = {
@@ -148,5 +155,26 @@ class InterviewRepository(BaseRepository):
         }
         if notes is not None:
             update_data["notes"] = notes
+        if candidate_requested_date is not None:
+            update_data["candidate_requested_date"] = candidate_requested_date
+        if candidate_requested_time is not None:
+            update_data["candidate_requested_time"] = candidate_requested_time
+        if candidate_requested_role is not None:
+            update_data["candidate_requested_role"] = candidate_requested_role
+        if salary_requested is not None:
+            update_data["salary_requested"] = salary_requested
+        if final_fit_salary is not None:
+            update_data["final_fit_salary"] = final_fit_salary
+        if joining_date is not None:
+            update_data["joining_date"] = joining_date
+        if interview_document_files is not None:
+            update_data["interview_document_files"] = interview_document_files
+
+        # Calculate a combined candidate_requested_date_time if both are provided or updated
+        combined_dt = None
+        if candidate_requested_date:
+            combined_dt = f"{candidate_requested_date} {candidate_requested_time or ''}".strip()
+        if combined_dt:
+            update_data["candidate_requested_date_time"] = combined_dt
 
         return await self.update(interview_id, update_data)
