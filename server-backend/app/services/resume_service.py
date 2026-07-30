@@ -37,17 +37,23 @@ class ResumeService:
             raise FileUploadError("No filename provided.")
 
         original_filename = sanitize_filename(file.filename)
+        content = await validate_uploaded_file(file)
+
+        # Compute SHA256 checksum for the file
+        import hashlib
+        file_hash = hashlib.sha256(content).hexdigest()
 
         # Check duplicate original filename for user: if existing, return existing or update with unique suffix
         existing_resume = await self.resume_repo.find_by_user_and_filename(user_id, original_filename)
+        
+        ext = original_filename.rsplit(".", 1)[-1].lower()
         if existing_resume:
             logger.info(f"Existing upload found for '{original_filename}'. Overwriting/updating record.")
-
-        content = await validate_uploaded_file(file)
-
-        ext = original_filename.rsplit(".", 1)[-1].lower()
-        resume_id = generate_uuid()
-        unique_filename = f"{resume_id}_{original_filename}"
+            resume_id = existing_resume["id"]
+            unique_filename = existing_resume.get("filename") or f"{resume_id}_{original_filename}"
+        else:
+            resume_id = generate_uuid()
+            unique_filename = f"{resume_id}_{original_filename}"
         file_path = str(self.upload_dir / unique_filename)
 
         # Write file to disk
@@ -78,7 +84,6 @@ class ResumeService:
         parsed_data = {}
         ai_evaluation = {}
         
-        # 4. Create MongoDB Document with PENDING status
         resume_doc = ResumeDocument(
             id=resume_id,
             user_id=user_id,
@@ -87,19 +92,25 @@ class ResumeService:
             file_path=file_path,
             extracted_text=extracted_text,
             s3_url=s3_url,
+            file_hash=file_hash,
             parsed_data=parsed_data,
             ai_evaluation=ai_evaluation,
             status=ResumeStatus.PENDING,
         )
 
-        created = await self.resume_repo.create(resume_doc.to_dict())
-        logger.info(f"Recorded resume document in MongoDB: ID '{resume_id}' for user '{user_id}' with S3 URL '{s3_url}'")
+        if existing_resume:
+            created = await self.resume_repo.update(resume_id, resume_doc.to_dict())
+            logger.info(f"Updated existing resume document in MongoDB: ID '{resume_id}'")
+        else:
+            created = await self.resume_repo.create(resume_doc.to_dict())
+            logger.info(f"Recorded resume document in MongoDB: ID '{resume_id}' for user '{user_id}' with S3 URL '{s3_url}'")
         
         if status != ResumeStatus.FAILED:
             # Enqueue the background task for AI parsing
             background_tasks.add_task(
                 self._process_ai_parsing_async,
                 resume_id=resume_id,
+                user_id=user_id,
                 file_path=file_path,
                 original_filename=original_filename,
                 content_type=file.content_type or "application/pdf"
@@ -107,7 +118,7 @@ class ResumeService:
             
         return ResumeResponse.model_validate(created)
 
-    async def _process_ai_parsing_async(self, resume_id: str, file_path: str, original_filename: str, content_type: str):
+    async def _process_ai_parsing_async(self, resume_id: str, user_id: str, file_path: str, original_filename: str, content_type: str):
         """Background task to run AI parsing via httpx and update MongoDB."""
         try:
             import httpx
@@ -159,10 +170,22 @@ class ResumeService:
                 else:
                     raise Exception("AI Parser polling timed out after 5 minutes")
                     
+            # Check for email conflict
+            email = parsed_data.get("email")
+            email_conflict = False
+            existing_resume_id = None
+            if email and isinstance(email, str) and email.strip():
+                existing_doc = await self.resume_repo.find_by_email(user_id=user_id, email=email.strip())
+                if existing_doc and existing_doc["id"] != resume_id:
+                    email_conflict = True
+                    existing_resume_id = existing_doc["id"]
+            
             await self.resume_repo.update(resume_id, {
                 "parsed_data": parsed_data,
                 "ai_evaluation": ai_evaluation,
-                "status": ResumeStatus.PARSED.value
+                "status": ResumeStatus.PARSED.value,
+                "email_conflict": email_conflict,
+                "existing_resume_id": existing_resume_id,
             })
             logger.info(f"Background AI Parsing completed for resume '{resume_id}'")
         except Exception as e:
@@ -441,3 +464,99 @@ class ResumeService:
             "ai_technical_scores": sorted(list(ai_technical_scores)),
             "personality_analysis": personality_analysis_list,
         }
+
+    async def merge_resume(self, new_resume_id: str, existing_resume_id: str, user_id: str, is_admin: bool = False) -> ResumeResponse:
+        """Merge a newly uploaded resume into an existing candidate profile."""
+        new_resume = await self.resume_repo.get_by_id(new_resume_id)
+        existing_resume = await self.resume_repo.get_by_id(existing_resume_id)
+
+        if not new_resume or not existing_resume:
+            raise NotFoundError("One or both resumes not found.")
+        if not is_admin and (new_resume["user_id"] != user_id or existing_resume["user_id"] != user_id):
+            raise NotFoundError("Resumes not found.")
+
+        # Prepare update for the existing resume
+        update_fields: Dict[str, Any] = {}
+        
+        # Merge parsed data (new overwrites old)
+        current_parsed = existing_resume.get("parsed_data") or {}
+        if new_resume.get("parsed_data"):
+            current_parsed.update(new_resume["parsed_data"])
+        update_fields["parsed_data"] = current_parsed
+        
+        # Update AI evaluation
+        if new_resume.get("ai_evaluation"):
+            update_fields["ai_evaluation"] = new_resume["ai_evaluation"]
+            
+        # Update text
+        if new_resume.get("extracted_text"):
+            update_fields["extracted_text"] = new_resume["extracted_text"]
+            
+        # Move the new file to other_documents (or set it as main and move old to other)
+        # Let's set the new one as main and move old to other
+        other_docs = existing_resume.get("other_documents") or []
+        other_docs.append({
+            "filename": existing_resume.get("original_filename"),
+            "s3_url": existing_resume.get("s3_url"),
+            "doc_type": "Previous Resume",
+            "uploaded_at": existing_resume.get("upload_date")
+        })
+        
+        update_fields["other_documents"] = other_docs
+        update_fields["filename"] = new_resume.get("filename")
+        update_fields["original_filename"] = new_resume.get("original_filename")
+        update_fields["file_path"] = new_resume.get("file_path")
+        update_fields["s3_url"] = new_resume.get("s3_url")
+        update_fields["file_hash"] = new_resume.get("file_hash")
+        
+        # Add HR update
+        hr_update = {
+            "comment": f"Profile updated automatically from new upload {new_resume.get('original_filename')}",
+            "author": "System",
+            "updated_at": utc_now().isoformat()
+        }
+
+        updated_doc = await self.resume_repo.update_resume_fields(existing_resume_id, update_fields, hr_update=hr_update)
+        
+        # Delete the new resume document from DB (but keep the file on disk/S3 since we transferred it)
+        await self.resume_repo.delete(new_resume_id)
+        
+        return ResumeResponse.model_validate(updated_doc)
+
+    async def upload_additional_document(self, resume_id: str, user_id: str, file: UploadFile, doc_type: str, is_admin: bool = False) -> ResumeResponse:
+        """Upload an auxiliary document to a candidate profile."""
+        resume = await self.resume_repo.get_by_id(resume_id)
+        if not resume:
+            raise NotFoundError("Resume not found.")
+        if not is_admin and resume["user_id"] != user_id:
+            raise NotFoundError("Resume not found.")
+            
+        if not file.filename:
+            raise FileUploadError("No filename provided.")
+
+        original_filename = sanitize_filename(file.filename)
+        content = await validate_uploaded_file(file)
+
+        ext = original_filename.rsplit(".", 1)[-1].lower()
+        doc_id = generate_uuid()
+        unique_filename = f"{doc_id}_{original_filename}"
+        file_path = str(self.upload_dir / unique_filename)
+
+        with open(file_path, "wb") as f:
+            f.write(content)
+
+        content_type = file.content_type or "application/octet-stream"
+        s3_url = self.s3_service.upload_file(content, unique_filename, content_type)
+        
+        new_doc = {
+            "filename": original_filename,
+            "s3_url": s3_url,
+            "doc_type": doc_type,
+            "uploaded_at": utc_now().isoformat()
+        }
+        
+        other_docs = resume.get("other_documents") or []
+        other_docs.append(new_doc)
+        
+        updated_doc = await self.resume_repo.update_resume_fields(resume_id, {"other_documents": other_docs})
+        return ResumeResponse.model_validate(updated_doc)

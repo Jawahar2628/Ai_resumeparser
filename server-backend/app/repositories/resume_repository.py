@@ -163,6 +163,14 @@ class ResumeRepository(BaseRepository):
         """Check if user has already uploaded a file with the same original filename."""
         return await self.find_one({"user_id": user_id, "original_filename": original_filename})
 
+    async def find_by_file_hash(self, file_hash: str) -> Optional[Dict[str, Any]]:
+        """Check if a file with this hash already exists across the system."""
+        return await self.find_one({"file_hash": file_hash})
+
+    async def find_by_email(self, user_id: str, email: str) -> Optional[Dict[str, Any]]:
+        """Check if a parsed resume already exists with this email for the user."""
+        return await self.find_one({"user_id": user_id, "parsed_data.email": email})
+
     async def update_status_and_text(self, resume_id: str, status: ResumeStatus, extracted_text: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """Update resume extraction status and extracted text content."""
         update_fields: Dict[str, Any] = {"status": status.value}

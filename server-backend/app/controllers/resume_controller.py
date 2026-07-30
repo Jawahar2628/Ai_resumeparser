@@ -117,3 +117,19 @@ class ResumeController:
             data=resumes,
             message="Parsed resume summary retrieved successfully.",
         )
+
+    async def merge_resume(self, new_resume_id: str, existing_resume_id: str, user_id: str, is_admin: bool = False) -> JSONResponse:
+        """Process request to merge a new resume into an existing candidate profile."""
+        resume_response = await self.resume_service.merge_resume(new_resume_id, existing_resume_id, user_id, is_admin=is_admin)
+        return success_response(
+            data=resume_response.model_dump(),
+            message="Resumes merged successfully.",
+        )
+
+    async def add_document(self, resume_id: str, file: UploadFile, doc_type: str, user_id: str, is_admin: bool = False) -> JSONResponse:
+        """Process request to upload an additional document to a candidate profile."""
+        resume_response = await self.resume_service.upload_additional_document(resume_id, user_id, file, doc_type, is_admin=is_admin)
+        return success_response(
+            data=resume_response.model_dump(),
+            message="Document added successfully.",
+        )

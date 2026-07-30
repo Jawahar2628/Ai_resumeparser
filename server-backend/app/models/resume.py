@@ -18,9 +18,13 @@ class ResumeDocument(BaseModel):
     file_path: str
     extracted_text: Optional[str] = None
     s3_url: Optional[str] = None
+    file_hash: Optional[str] = None
     parsed_data: Optional[Dict[str, Any]] = None
     ai_evaluation: Optional[Dict[str, Any]] = None
     hr_updates: Optional[List[Dict[str, Any]]] = Field(default_factory=list)
+    other_documents: Optional[List[Dict[str, Any]]] = Field(default_factory=list)
+    email_conflict: bool = False
+    existing_resume_id: Optional[str] = None
     upload_date: str = Field(default_factory=lambda: utc_now().isoformat())
     status: ResumeStatus = ResumeStatus.PENDING
 

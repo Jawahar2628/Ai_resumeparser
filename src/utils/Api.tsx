@@ -1,13 +1,16 @@
 const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-export const RESUME_UPLOAD = `${BASE_URL}/resumes/upload`;
-export const RESUME_LIST = `${BASE_URL}/resumes`;
-export const RESUME_MATCH = `${BASE_URL}/resumes/match`;
-export const RESUME_PARSED_SUMMARY = `${BASE_URL}/resumes/parsed-summary`;
+export const API_BASE = "http://127.0.0.1:8000/api/v1";
+export const RESUME_UPLOAD = `${API_BASE}/resumes/upload`;
+export const RESUME_LIST = `${API_BASE}/resumes`;
+export const RESUME_MATCH = `${API_BASE}/resumes/match`;
+export const RESUME_SUMMARY = `${API_BASE}/resumes/parsed-summary`;
+export const RESUME_MERGE = (id: string) => `${API_BASE}/resumes/${id}/merge`;
+export const RESUME_DOCUMENTS = (id: string) => `${API_BASE}/resumes/${id}/documents`;
 export const INTERVIEWS_URL = `${BASE_URL}/interviews`;
 
-export const AUTH_LOGIN = `${BASE_URL}/auth/login`;
-export const AUTH_REGISTER = `${BASE_URL}/auth/register`;
+export const AUTH_LOGIN = `${API_BASE}/auth/login`;
+export const AUTH_REGISTER = `${API_BASE}/auth/register`;
 export const AUTH_REFRESH = `${BASE_URL}/auth/refresh`;
 
 export const USER_ME = `${BASE_URL}/users/me`;

@@ -1,6 +1,6 @@
-import { useState } from "react";
-import { UploadCloud, FileText, CheckCircle2, Loader2, X, User, Briefcase, GraduationCap, Award, Code, FolderGit2, ExternalLink } from "lucide-react";
-import { RESUME_UPLOAD, RESUME_LIST } from "../utils/Api";
+import { useState, useEffect } from "react";
+import { UploadCloud, FileText, CheckCircle2, Loader2, X, User, Briefcase, GraduationCap, Award, Code, FolderGit2, ExternalLink, Paperclip } from "lucide-react";
+import { RESUME_UPLOAD, RESUME_LIST, RESUME_DOCUMENTS } from "../utils/Api";
 
 export default function Upload() {
   const [isDragging, setIsDragging] = useState(false);
@@ -10,6 +10,10 @@ export default function Upload() {
   const [parsedResponse, setParsedResponse] = useState<any>(null);
   const [showModal, setShowModal] = useState(false);
   const [activeTab, setActiveTab] = useState<string>("personal");
+  
+  const [otherDocFile, setOtherDocFile] = useState<File | null>(null);
+  const [otherDocType, setOtherDocType] = useState<string>("Cover Letter");
+  const [isUploadingDoc, setIsUploadingDoc] = useState(false);
 
   const steps = [
     { number: 1, title: "Upload", active: true },
@@ -18,11 +22,7 @@ export default function Upload() {
     { number: 4, title: "Complete", active: parsedResponse ? true : false },
   ];
 
-  const recentUploads = [
-    { name: "John_Doe_Resume.pdf", time: "2 mins ago", type: "pdf", status: "completed" },
-    { name: "Priya_S_Resume.docx", time: "15 mins ago", type: "docx", status: "completed" },
-    { name: "Ramesh_K_Resume.pdf", time: "1 hour ago", type: "pdf", status: "completed" },
-  ];
+
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -107,6 +107,22 @@ export default function Upload() {
         throw new Error("Parsing timed out after 5 minutes.");
       }
 
+      if (finalResult.email_conflict) {
+        if (window.confirm("A candidate with this email already exists. Do you want to UPDATE the existing candidate profile? (Click Cancel to keep as a separate new profile)")) {
+          const mergeRes = await fetch(`http://127.0.0.1:8000/api/v1/resumes/${finalResult.id}/merge?existing_resume_id=${finalResult.existing_resume_id}`, {
+            method: 'POST',
+            headers,
+          });
+          const mergeData = await mergeRes.json();
+          if (mergeRes.ok) {
+            finalResult = mergeData.data || mergeData;
+            alert("Candidate profile successfully updated and merged!");
+          } else {
+            alert("Merge failed. Showing as separate profile.");
+          }
+        }
+      }
+
       setIsParsing(false);
       setParsedResponse(finalResult);
       setShowModal(true);
@@ -137,6 +153,38 @@ export default function Upload() {
     frameworks: pData.frameworks || [],
     databases: pData.databases || [],
     cloud_technologies: pData.cloud_tech || [],
+  };
+  const otherDocs = parsedResponse?.other_documents || [];
+
+  const handleUploadOtherDoc = async () => {
+    if (!otherDocFile || !parsedResponse?.id) return;
+    setIsUploadingDoc(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', otherDocFile);
+      
+      const token = localStorage.getItem('token') || localStorage.getItem('access_token');
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      
+      const res = await fetch(`${RESUME_DOCUMENTS(parsedResponse.id)}?doc_type=${encodeURIComponent(otherDocType)}`, {
+        method: 'POST',
+        headers,
+        body: formData,
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setParsedResponse(data.data || data);
+        setOtherDocFile(null);
+        alert("Document uploaded successfully!");
+      } else {
+        alert(data.message || "Failed to upload document");
+      }
+    } catch (e) {
+      alert("Failed to upload document");
+    } finally {
+      setIsUploadingDoc(false);
+    }
   };
 
   return (
@@ -215,13 +263,7 @@ export default function Upload() {
                 <div className="h-px bg-slate-800 flex-1"></div>
               </div>
 
-              {/* LinkedIn Import Button */}
-              <button className="flex items-center justify-center gap-2 border border-slate-800 hover:bg-slate-900 text-slate-200 px-6 py-2.5 rounded-xl text-xs font-bold transition-colors w-full max-w-xs shadow-sm bg-[#030514]">
-                <span className="bg-[#0a66c2] text-white w-4 h-4 rounded-xs flex items-center justify-center text-[10px] font-bold">
-                  in
-                </span>
-                Import from LinkedIn (Optional)
-              </button>
+              {/* LinkedIn Import Removed per user request */}
             </div>
 
             {/* Selected File & Actions */}
@@ -314,32 +356,7 @@ export default function Upload() {
               </ul>
             </div>
 
-            {/* Recent Uploads Box */}
-            <div className="bg-[#030514] p-6 rounded-2xl border border-slate-800 shadow-sm space-y-4">
-              <h3 className="text-sm font-bold text-slate-100">Recent Uploads</h3>
-              <div className="space-y-3">
-                {recentUploads.map((item, idx) => (
-                  <div key={idx} className="flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-2.5">
-                      <div className={`p-1.5 rounded-lg ${item.type === 'pdf' ? 'bg-slate-900 border border-slate-800 text-white' : 'bg-blue-600 text-white'}`}>
-                        <FileText size={14} />
-                      </div>
-                      <span className="font-bold text-slate-200">{item.name}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-slate-400 text-[11px]">{item.time}</span>
-                      <CheckCircle2 size={16} className="text-emerald-500" />
-                    </div>
-                  </div>
-                ))}
-              </div>
 
-              <div className="pt-2 text-right">
-                <button className="text-xs font-bold text-blue-400 hover:text-blue-300">
-                  View All
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       </div>
@@ -374,6 +391,7 @@ export default function Upload() {
                 { id: "skills", label: "Skills", icon: Code },
                 { id: "projects", label: "Projects", icon: FolderGit2 },
                 { id: "evaluation", label: "AI Evaluation", icon: ExternalLink },
+                { id: "documents", label: "Additional Documents", icon: Paperclip },
               ].map((tab) => {
                 const Icon = tab.icon;
                 return (
@@ -544,6 +562,76 @@ export default function Upload() {
                   )}
                 </div>
               )}
+
+              {/* Tab 8: Additional Documents */}
+              {activeTab === "documents" && (
+                <div className="space-y-6">
+                  <h4 className="text-sm font-bold text-blue-400 uppercase tracking-wider">Candidate Documents</h4>
+                  
+                  {/* Upload Form */}
+                  <div className="bg-[#030514] border border-slate-800 p-5 rounded-xl space-y-4">
+                    <h5 className="text-xs font-bold text-slate-200">Upload New Document</h5>
+                    <div className="flex flex-col md:flex-row gap-4 items-center">
+                      <select 
+                        value={otherDocType}
+                        onChange={e => setOtherDocType(e.target.value)}
+                        className="bg-slate-900 border border-slate-800 text-xs text-white p-2.5 rounded-lg focus:outline-none focus:border-blue-500 w-full md:w-1/4"
+                      >
+                        <option value="Cover Letter">Cover Letter</option>
+                        <option value="ID Proof">ID Proof</option>
+                        <option value="Certification">Certification</option>
+                        <option value="Previous Resume">Previous Resume</option>
+                        <option value="Other">Other</option>
+                      </select>
+                      
+                      <input 
+                        type="file" 
+                        onChange={e => e.target.files && setOtherDocFile(e.target.files[0])}
+                        className="text-xs text-slate-300 w-full md:w-1/2 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700"
+                      />
+                      
+                      <button 
+                        onClick={handleUploadOtherDoc}
+                        disabled={!otherDocFile || isUploadingDoc}
+                        className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white px-5 py-2.5 rounded-lg text-xs font-bold transition-colors whitespace-nowrap w-full md:w-auto"
+                      >
+                        {isUploadingDoc ? "Uploading..." : "Upload"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Documents List */}
+                  <div className="space-y-3">
+                    {otherDocs.length === 0 ? (
+                      <p className="text-xs text-slate-500 italic">No additional documents uploaded yet.</p>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {otherDocs.map((doc: any, idx: number) => (
+                          <div key={idx} className="bg-slate-900/50 border border-slate-800 p-4 rounded-xl flex items-center justify-between">
+                            <div className="flex items-center gap-3 overflow-hidden">
+                              <div className="bg-blue-900/30 p-2 rounded-lg text-blue-400">
+                                <Paperclip size={16} />
+                              </div>
+                              <div className="overflow-hidden">
+                                <p className="text-xs font-bold text-slate-200 truncate">{doc.filename}</p>
+                                <p className="text-[10px] text-slate-400">{doc.doc_type} • {new Date(doc.uploaded_at).toLocaleDateString()}</p>
+                              </div>
+                            </div>
+                            <a 
+                              href={doc.s3_url} 
+                              target="_blank" 
+                              rel="noreferrer"
+                              className="text-blue-400 hover:text-blue-300 bg-blue-900/20 p-2 rounded-lg transition-colors"
+                            >
+                              <ExternalLink size={14} />
+                            </a>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Modal Footer */}
@@ -586,18 +674,24 @@ function FieldBox({ label, value, isLink, fullWidth }: { label: string; value?: 
   );
 }
 
-function SkillPillGroup({ title, items }: { title: string; items?: string[] }) {
+function SkillPillGroup({ title, items }: { title: string; items?: any[] }) {
   const list = Array.isArray(items) ? items : [];
   return (
     <div className="bg-[#030514] border border-slate-800 p-3.5 rounded-xl space-y-2">
       <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wide block">{title}</span>
       <div className="flex flex-wrap gap-1.5">
         {list.length > 0 ? (
-          list.map((item, idx) => (
-            <span key={idx} className="bg-blue-950/60 border border-blue-800/40 text-blue-300 px-2.5 py-0.5 rounded-md text-[11px] font-medium">
-              {item}
-            </span>
-          ))
+          list.map((item, idx) => {
+            let displayItem = item;
+            if (typeof item === 'object' && item !== null) {
+              displayItem = item.name || item.skill || JSON.stringify(item);
+            }
+            return (
+              <span key={idx} className="bg-blue-950/60 border border-blue-800/40 text-blue-300 px-2.5 py-0.5 rounded-md text-[11px] font-medium">
+                {String(displayItem)}
+              </span>
+            );
+          })
         ) : (
           <span className="text-[11px] text-slate-600 italic">None extracted</span>
         )}

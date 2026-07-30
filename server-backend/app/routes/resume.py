@@ -165,3 +165,34 @@ async def delete_resume(
 ):
     is_admin = current_user.get("role") == UserRole.ADMIN
     return await controller.delete_resume(resume_id, current_user["id"], is_admin=is_admin)
+
+@router.post(
+    "/{resume_id}/merge",
+    status_code=status.HTTP_200_OK,
+    summary="Merge duplicate resume",
+    description="Merge newly uploaded resume into an existing candidate profile.",
+)
+async def merge_resume(
+    resume_id: str,
+    existing_resume_id: str = Query(..., description="ID of the existing resume to update"),
+    current_user: dict = Depends(get_current_active_user),
+    controller: ResumeController = Depends(get_resume_controller),
+):
+    is_admin = current_user.get("role") == UserRole.ADMIN
+    return await controller.merge_resume(resume_id, existing_resume_id, current_user["id"], is_admin=is_admin)
+
+@router.post(
+    "/{resume_id}/documents",
+    status_code=status.HTTP_201_CREATED,
+    summary="Add auxiliary document",
+    description="Upload an additional document (Cover Letter, ID, etc) to a candidate profile.",
+)
+async def add_document(
+    resume_id: str,
+    file: UploadFile = File(...),
+    doc_type: str = Query(..., description="Type of document (e.g. Cover Letter, Certification, ID)"),
+    current_user: dict = Depends(get_current_active_user),
+    controller: ResumeController = Depends(get_resume_controller),
+):
+    is_admin = current_user.get("role") == UserRole.ADMIN
+    return await controller.add_document(resume_id, file, doc_type, current_user["id"], is_admin=is_admin)
