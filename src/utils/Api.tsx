@@ -204,7 +204,7 @@ export const matchResumes = async (params: MatchFilterParams = {}) => {
 
 export const getParsedResumeSummary = async (skip: number = 0, limit: number = 100) => {
   const token = localStorage.getItem("access_token") || "";
-  const response = await fetch(`${RESUME_PARSED_SUMMARY}?skip=${skip}&limit=${limit}`, {
+  const response = await fetch(`${RESUME_SUMMARY}?skip=${skip}&limit=${limit}`, {
     method: "GET",
     headers: {
       "Authorization": `Bearer ${token}`,
@@ -287,6 +287,8 @@ export interface InterviewItem {
   resume_id?: string;
   job_id?: string;
   job_title: string;
+  job_location?: string;
+  job_type?: string;
   interview_type: InterviewTypeEnum;
   round_number: number;
   scheduled_date: string;
@@ -298,12 +300,23 @@ export interface InterviewItem {
   interviewer_email?: string;
   meeting_link?: string;
   meeting_platform?: string;
+  location?: string;
+  interview_location?: string;
+  hr_call_verification?: string;
+  candidate_requested_date_time?: string;
+  candidate_requested_date?: string;
+  candidate_requested_time?: string;
+  candidate_requested_role?: string;
+  salary_requested?: string;
+  final_fit_salary?: string;
+  joining_date?: string;
+  interview_document_files?: string[];
   status: InterviewStatusEnum;
   rating?: number;
   feedback?: string;
   strengths?: string[];
   weaknesses?: string[];
-  recommendation?: string;
+  recommendation?: string; // Selected / Rejected / Pending / Hold
   notes?: string;
   reschedule_history?: any[];
   created_by?: string;
@@ -318,6 +331,8 @@ export interface CreateInterviewPayload {
   resume_id?: string;
   job_id?: string;
   job_title: string;
+  job_location?: string;
+  job_type?: string;
   interview_type?: InterviewTypeEnum;
   round_number?: number;
   scheduled_date: string;
@@ -329,12 +344,66 @@ export interface CreateInterviewPayload {
   interviewer_email?: string;
   meeting_link?: string;
   meeting_platform?: string;
+  location?: string;
+  interview_location?: string;
+  hr_call_verification?: string;
+  candidate_requested_date_time?: string;
+  candidate_requested_date?: string;
+  candidate_requested_time?: string;
+  candidate_requested_role?: string;
+  salary_requested?: string;
+  final_fit_salary?: string;
+  joining_date?: string;
+  interview_document_files?: string[];
+  recommendation?: string;
+  notes?: string;
+}
+
+export interface CandidateInterviewItem {
+  candidate_id: string;
+  candidate_name: string;
+  resume_id?: string;
+  location?: string;
+  interview_location?: string;
+}
+
+export interface BatchCreateInterviewPayload {
+  candidates: CandidateInterviewItem[];
+  job_id?: string;
+  job_title: string;
+  job_location?: string;
+  job_type?: string;
+  interview_type?: InterviewTypeEnum;
+  round_number?: number;
+  scheduled_date: string;
+  scheduled_time: string;
+  timezone?: string;
+  duration_minutes?: number;
+  interviewer_id?: string;
+  interviewer_name: string;
+  interviewer_email?: string;
+  meeting_link?: string;
+  meeting_platform?: string;
+  location?: string;
+  interview_location?: string;
+  hr_call_verification?: string;
+  candidate_requested_date_time?: string;
+  candidate_requested_date?: string;
+  candidate_requested_time?: string;
+  candidate_requested_role?: string;
+  salary_requested?: string;
+  final_fit_salary?: string;
+  joining_date?: string;
+  interview_document_files?: string[];
+  recommendation?: string;
   notes?: string;
 }
 
 export interface UpdateInterviewPayload {
   candidate_name?: string;
   job_title?: string;
+  job_location?: string;
+  job_type?: string;
   interview_type?: InterviewTypeEnum;
   round_number?: number;
   scheduled_date?: string;
@@ -346,6 +415,18 @@ export interface UpdateInterviewPayload {
   interviewer_email?: string;
   meeting_link?: string;
   meeting_platform?: string;
+  location?: string;
+  interview_location?: string;
+  hr_call_verification?: string;
+  candidate_requested_date_time?: string;
+  candidate_requested_date?: string;
+  candidate_requested_time?: string;
+  candidate_requested_role?: string;
+  salary_requested?: string;
+  final_fit_salary?: string;
+  joining_date?: string;
+  interview_document_files?: string[];
+  recommendation?: string;
   status?: InterviewStatusEnum;
   notes?: string;
 }
@@ -365,6 +446,13 @@ export interface SubmitFeedbackPayload {
   weaknesses?: string[];
   recommendation?: string;
   notes?: string;
+  candidate_requested_date?: string;
+  candidate_requested_time?: string;
+  candidate_requested_role?: string;
+  salary_requested?: string;
+  final_fit_salary?: string;
+  joining_date?: string;
+  interview_document_files?: string[];
 }
 
 export const getInterviews = async (params: {
@@ -427,6 +515,27 @@ export const createInterview = async (payload: CreateInterviewPayload) => {
 
   if (!response.ok) {
     throw new Error(resData.detail || "Failed to schedule interview");
+  }
+
+  return resData.data || resData;
+};
+
+export const batchCreateInterviews = async (payload: BatchCreateInterviewPayload) => {
+  const token = localStorage.getItem("access_token") || "";
+  const response = await fetch(`${INTERVIEWS_URL}/batch`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const resData = await response.json();
+  handleAuthError(response, resData);
+
+  if (!response.ok) {
+    throw new Error(resData.detail || "Failed to batch schedule interviews");
   }
 
   return resData.data || resData;

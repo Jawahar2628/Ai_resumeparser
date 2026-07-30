@@ -11,6 +11,7 @@ from app.core.database import get_database
 from app.core.dependencies import get_current_active_user, get_current_active_user_optional
 from app.repositories.interview_repository import InterviewRepository
 from app.schemas.interview import (
+    InterviewBatchCreateRequest,
     InterviewCreateRequest,
     InterviewFeedbackRequest,
     InterviewRescheduleRequest,
@@ -41,6 +42,20 @@ async def create_interview(
     controller: InterviewController = Depends(get_interview_controller),
 ):
     return await controller.create_interview(payload, user_id=current_user["id"])
+
+
+@router.post(
+    "/batch",
+    status_code=status.HTTP_201_CREATED,
+    summary="Batch schedule interviews globally",
+    description="Assign and schedule interviews for multiple filtered candidates at once.",
+)
+async def batch_create_interviews(
+    payload: InterviewBatchCreateRequest,
+    current_user: dict = Depends(get_current_active_user),
+    controller: InterviewController = Depends(get_interview_controller),
+):
+    return await controller.batch_create_interviews(payload, user_id=current_user["id"])
 
 
 @router.get(

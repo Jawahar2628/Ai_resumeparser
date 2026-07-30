@@ -7,6 +7,7 @@ from fastapi import status
 from fastapi.responses import JSONResponse
 
 from app.schemas.interview import (
+    InterviewBatchCreateRequest,
     InterviewCreateRequest,
     InterviewFeedbackRequest,
     InterviewRescheduleRequest,
@@ -29,6 +30,15 @@ class InterviewController:
         return success_response(
             data=res.model_dump(),
             message="Interview scheduled successfully.",
+            status_code=status.HTTP_201_CREATED,
+        )
+
+    async def batch_create_interviews(self, payload: InterviewBatchCreateRequest, user_id: str) -> JSONResponse:
+        """Schedule interviews for multiple candidates in batch."""
+        res = await self.interview_service.batch_create_interviews(payload, created_by=user_id)
+        return success_response(
+            data=[r.model_dump() for r in res],
+            message=f"Successfully scheduled {len(res)} interviews.",
             status_code=status.HTTP_201_CREATED,
         )
 

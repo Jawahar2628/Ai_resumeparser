@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { UploadCloud, FileText, CheckCircle2, Loader2, X, User, Briefcase, GraduationCap, Award, Code, FolderGit2, ExternalLink, Paperclip } from "lucide-react";
 import { RESUME_UPLOAD, RESUME_LIST, RESUME_DOCUMENTS } from "../utils/Api";
 
