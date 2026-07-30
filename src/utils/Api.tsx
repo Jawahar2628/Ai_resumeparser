@@ -128,28 +128,50 @@ export const getResumes = async (skip: number = 0, limit: number = 100) => {
 };
 
 export interface MatchFilterParams {
-  job_title?: string;
+  job_title?: string[];
   min_experience?: number;
   max_experience?: number;
-  location?: string;
-  employment_type?: string;
-  year_of_passing?: string;
+  location?: string[];
+  employment_type?: string[];
+  year_of_passing?: string[];
   skills?: string[];
+  keywords?: string[];
 }
 
 export const matchResumes = async (params: MatchFilterParams = {}) => {
   const token = localStorage.getItem("access_token") || "";
   const queryParts: string[] = [];
 
-  if (params.job_title) queryParts.push(`job_title=${encodeURIComponent(params.job_title)}`);
+  if (params.job_title && params.job_title.length > 0) {
+    params.job_title.forEach((j) => {
+      if (j.trim()) queryParts.push(`job_title=${encodeURIComponent(j.trim())}`);
+    });
+  }
   if (params.min_experience !== undefined) queryParts.push(`min_experience=${params.min_experience}`);
   if (params.max_experience !== undefined) queryParts.push(`max_experience=${params.max_experience}`);
-  if (params.location) queryParts.push(`location=${encodeURIComponent(params.location)}`);
-  if (params.employment_type) queryParts.push(`employment_type=${encodeURIComponent(params.employment_type)}`);
-  if (params.year_of_passing) queryParts.push(`year_of_passing=${encodeURIComponent(params.year_of_passing)}`);
+  if (params.location && params.location.length > 0) {
+    params.location.forEach((l) => {
+      if (l.trim()) queryParts.push(`location=${encodeURIComponent(l.trim())}`);
+    });
+  }
+  if (params.employment_type && params.employment_type.length > 0) {
+    params.employment_type.forEach((e) => {
+      if (e.trim()) queryParts.push(`employment_type=${encodeURIComponent(e.trim())}`);
+    });
+  }
+  if (params.year_of_passing && params.year_of_passing.length > 0) {
+    params.year_of_passing.forEach((y) => {
+      if (y.trim()) queryParts.push(`year_of_passing=${encodeURIComponent(y.trim())}`);
+    });
+  }
   if (params.skills && params.skills.length > 0) {
     params.skills.forEach((s) => {
       if (s.trim()) queryParts.push(`skills=${encodeURIComponent(s.trim())}`);
+    });
+  }
+  if (params.keywords && params.keywords.length > 0) {
+    params.keywords.forEach((k) => {
+      if (k.trim()) queryParts.push(`keywords=${encodeURIComponent(k.trim())}`);
     });
   }
 

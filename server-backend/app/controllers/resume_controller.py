@@ -35,13 +35,14 @@ class ResumeController:
     async def filter_resumes(
         self,
         user_id: str,
-        job_title: str = None,
+        job_title: list[str] = None,
         min_experience: float = None,
         max_experience: float = None,
-        location: str = None,
-        employment_type: str = None,
-        year_of_passing: str = None,
-        skills: list = None,
+        location: list[str] = None,
+        employment_type: list[str] = None,
+        year_of_passing: list[str] = None,
+        skills: list[str] = None,
+        keywords: list[str] = None,
         skip: int = 0,
         limit: int = 100,
     ) -> JSONResponse:
@@ -55,6 +56,7 @@ class ResumeController:
             employment_type=employment_type,
             year_of_passing=year_of_passing,
             skills=skills,
+            keywords=keywords,
             skip=skip,
             limit=limit,
         )

@@ -1,6 +1,14 @@
-import { useState, useEffect } from "react";
-import { Filter, Search, RefreshCw, UserCheck } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Filter, Search, RefreshCw, UserCheck, X } from "lucide-react";
 import { matchResumes, getParsedResumeSummary, type MatchFilterParams } from "../utils/Api";
+
+type FilterCategory = "Job Title" | "Location" | "Skill" | "Year of Passing" | "Min Exp" | "Max Exp" | "Keyword";
+
+interface FilterPill {
+  id: string;
+  category: FilterCategory;
+  value: string | number;
+}
 
 export default function JDMatch() {
   const [loading, setLoading] = useState(false);
@@ -30,16 +38,25 @@ export default function JDMatch() {
     ai_technical_scores: [],
   });
 
-  // Filter States
-  const [jobTitle, setJobTitle] = useState("");
-  const [minExp, setMinExp] = useState<number | "">("");
-  const [maxExp, setMaxExp] = useState<number | "">("");
-  const [location, setLocation] = useState("");
-  const [yearOfPassing, setYearOfPassing] = useState("");
-  const [skillInput, setSkillInput] = useState("");
+  // Filter States (Unified)
+  const [pills, setPills] = useState<FilterPill[]>([]);
+  const [searchInput, setSearchInput] = useState("");
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const [matchedResumes, setMatchedResumes] = useState<any[]>([]);
   const [showFilters, setShowFilters] = useState(true);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // Fetch parsed resume summary dropdown values
   useEffect(() => {
@@ -73,18 +90,16 @@ export default function JDMatch() {
   const fetchMatchedCandidates = async () => {
     setLoading(true);
     try {
-      const skillsArray = skillInput
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
+      const getValues = (cat: FilterCategory) => pills.filter((p) => p.category === cat).map((p) => String(p.value));
 
       const params: MatchFilterParams = {
-        job_title: jobTitle || undefined,
-        min_experience: minExp !== "" ? Number(minExp) : undefined,
-        max_experience: maxExp !== "" ? Number(maxExp) : undefined,
-        location: location || undefined,
-        year_of_passing: yearOfPassing || undefined,
-        skills: skillsArray.length > 0 ? skillsArray : undefined,
+        job_title: getValues("Job Title").length > 0 ? getValues("Job Title") : undefined,
+        min_experience: pills.find(p => p.category === "Min Exp")?.value as number | undefined,
+        max_experience: pills.find(p => p.category === "Max Exp")?.value as number | undefined,
+        location: getValues("Location").length > 0 ? getValues("Location") : undefined,
+        year_of_passing: getValues("Year of Passing").length > 0 ? getValues("Year of Passing") : undefined,
+        skills: getValues("Skill").length > 0 ? getValues("Skill") : undefined,
+        keywords: getValues("Keyword").length > 0 ? getValues("Keyword") : undefined,
       };
 
       const res = await matchResumes(params);
@@ -99,7 +114,84 @@ export default function JDMatch() {
 
   useEffect(() => {
     fetchMatchedCandidates();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Helper to add a pill and replace if singular category
+  const addPill = (category: FilterCategory, value: string | number) => {
+    setPills((prev) => {
+      // Min Exp and Max Exp are singular
+      if (category === "Min Exp" || category === "Max Exp") {
+        const filtered = prev.filter((p) => p.category !== category);
+        return [...filtered, { id: `${category}-${value}-${Date.now()}`, category, value }];
+      }
+      // For others, avoid duplicates
+      if (prev.some((p) => p.category === category && p.value === value)) {
+        return prev;
+      }
+      return [...prev, { id: `${category}-${value}-${Date.now()}`, category, value }];
+    });
+    setSearchInput("");
+    setIsDropdownOpen(false);
+  };
+
+  const removePill = (id: string) => {
+    setPills((prev) => prev.filter((p) => p.id !== id));
+  };
+
+  const clearAllPills = () => {
+    setPills([]);
+  };
+
+  // Generate suggestions based on search input
+  const getSuggestions = () => {
+    const lowerInput = searchInput.toLowerCase().trim();
+    
+    // Helper to filter options
+    const filterOpts = (opts: (string | number)[], category: FilterCategory) => {
+      return Array.from(new Set(opts))
+        .filter(opt => String(opt).toLowerCase().includes(lowerInput))
+        .map(opt => ({ category, value: opt }));
+    };
+
+    const suggestions: { category: FilterCategory, value: string | number }[] = [
+      ...filterOpts([...summaryOptions.roles, ...summaryOptions.designations], "Job Title"),
+      ...filterOpts(summaryOptions.locations, "Location"),
+      ...filterOpts([...summaryOptions.primary_skills, ...summaryOptions.frameworks, ...summaryOptions.databases], "Skill"),
+      ...filterOpts(summaryOptions.year_of_passing, "Year of Passing"),
+    ];
+
+    // Smart Experience Parsing
+    // If input contains a number, suggest it dynamically for Min/Max Experience
+    const numMatch = lowerInput.match(/\d+(\.\d+)?/);
+    if (numMatch) {
+      const num = Number(numMatch[0]);
+      if (lowerInput.includes("min") || lowerInput.includes(">")) {
+        suggestions.push({ category: "Min Exp", value: num });
+      } else if (lowerInput.includes("max") || lowerInput.includes("<")) {
+        suggestions.push({ category: "Max Exp", value: num });
+      } else {
+        suggestions.push({ category: "Min Exp", value: num });
+        suggestions.push({ category: "Max Exp", value: num });
+      }
+    } else {
+      // Fallback to options from the database if they type something like "exp"
+      suggestions.push(...filterOpts(summaryOptions.total_experience_years, "Min Exp"));
+      suggestions.push(...filterOpts(summaryOptions.total_experience_years, "Max Exp"));
+    }
+
+    // Always offer a global keyword search option
+    if (searchInput.trim().length > 0) {
+      suggestions.push({ category: "Keyword", value: searchInput.trim() });
+    }
+
+    // Deduplicate suggestions just in case
+    const uniqueSuggestions = suggestions.filter((v, i, a) => a.findIndex(t => (t.category === v.category && t.value === v.value)) === i);
+
+    return uniqueSuggestions.slice(0, 15); // limit to 15 suggestions to prevent overflow
+  };
+
+  const suggestions = getSuggestions();
 
   return (
     <div className="bg-[#030514] text-slate-100 min-h-screen p-6 rounded-2xl space-y-6 font-sans">
@@ -122,276 +214,117 @@ export default function JDMatch() {
       {/* Multi-Filter Input Card Panel */}
       {showFilters && (
         <div className="bg-[#090d21] p-5 rounded-2xl border border-slate-800 space-y-4 shadow-lg">
-          <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800/80 pb-3">
             <h2 className="text-xs font-extrabold text-indigo-400 uppercase tracking-wider flex items-center gap-2">
-              <Filter size={14} /> JD Filter Parameters
+              <Filter size={14} /> Unified JD Filter
             </h2>
             <button
               onClick={fetchMatchedCandidates}
               disabled={loading}
-              className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer shadow-md disabled:opacity-50"
+              className="flex items-center justify-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer shadow-md disabled:opacity-50 w-full md:w-auto"
             >
               {loading ? <RefreshCw size={14} className="animate-spin" /> : <Search size={14} />}
-              Apply & Search Params
+              Apply & Search
             </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
-            {/* Filter 1: Job Title / Role Dropdown */}
-            <div className="space-y-1">
-              <label className="text-[11px] font-semibold text-slate-400 block">Job Title / Role</label>
-              <select
-                value={jobTitle}
-                onChange={(e) => setJobTitle(e.target.value)}
-                className="w-full bg-[#030514] border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
-              >
-                <option value="">All Job Titles / Roles</option>
-                {summaryOptions.roles.length > 0 && (
-                  <optgroup label="Roles">
-                    {summaryOptions.roles.map((r, i) => (
-                      <option key={`role-${i}`} value={r}>{r}</option>
-                    ))}
-                  </optgroup>
-                )}
-                {summaryOptions.designations.length > 0 && (
-                  <optgroup label="Designations">
-                    {summaryOptions.designations.map((d, i) => (
-                      <option key={`desg-${i}`} value={d}>{d}</option>
-                    ))}
-                  </optgroup>
-                )}
-              </select>
-            </div>
-
-            {/* Filter 2: Min & Max Experience Dropdowns */}
-            <div className="space-y-1">
-              <label className="text-[11px] font-semibold text-slate-400 block">Experience Range (Years)</label>
-              <div className="flex items-center gap-2">
-                <select
-                  value={minExp}
-                  onChange={(e) => setMinExp(e.target.value !== "" ? Number(e.target.value) : "")}
-                  className="w-1/2 bg-[#030514] border border-slate-800 rounded-xl px-2 py-2 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
-                >
-                  <option value="">Min Exp</option>
-                  {summaryOptions.total_experience_years.map((y, i) => (
-                    <option key={`min-${i}`} value={y}>{y} Yrs</option>
-                  ))}
-                </select>
-                <span className="text-slate-500 text-xs">-</span>
-                <select
-                  value={maxExp}
-                  onChange={(e) => setMaxExp(e.target.value !== "" ? Number(e.target.value) : "")}
-                  className="w-1/2 bg-[#030514] border border-slate-800 rounded-xl px-2 py-2 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
-                >
-                  <option value="">Max Exp</option>
-                  {summaryOptions.total_experience_years.map((y, i) => (
-                    <option key={`max-${i}`} value={y}>{y} Yrs</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Filter 3: Location Dropdown */}
-            <div className="space-y-1">
-              <label className="text-[11px] font-semibold text-slate-400 block">Location</label>
-              <select
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                className="w-full bg-[#030514] border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
-              >
-                <option value="">All Locations</option>
-                {summaryOptions.locations.map((loc, i) => (
-                  <option key={`loc-${i}`} value={loc}>{loc}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Filter 4: Year of Passing Dropdown */}
-            <div className="space-y-1">
-              <label className="text-[11px] font-semibold text-slate-400 block">Year of Passing</label>
-              <select
-                value={yearOfPassing}
-                onChange={(e) => setYearOfPassing(e.target.value)}
-                className="w-full bg-[#030514] border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
-              >
-                <option value="">All Years of Passing</option>
-                {summaryOptions.year_of_passing.map((y, i) => (
-                  <option key={`yop-${i}`} value={y}>{y}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Filter 5: Required Skills Checkbox Selection Popover / Grid */}
-            <div className="space-y-1 md:col-span-5 pt-2 border-t border-slate-800/60">
-              <div className="flex items-center justify-between">
-                <label className="text-[11px] font-bold text-indigo-400 uppercase tracking-wider block">
-                  Select Skills (Checkboxes)
-                </label>
-                {skillInput && (
-                  <button
-                    onClick={() => setSkillInput("")}
-                    className="text-[10px] text-rose-400 hover:underline font-semibold cursor-pointer"
-                  >
-                    Clear All Selected Skills
+          <div className="space-y-3">
+            <label className="text-[11px] font-semibold text-slate-400 block">
+              Search by Skills, Location, Role, Experience, or Year of Passing
+            </label>
+            
+            <div className="relative" ref={dropdownRef}>
+              <div className="flex items-center bg-[#030514] border border-slate-700 rounded-xl px-3 py-2 focus-within:ring-1 focus-within:ring-indigo-500 focus-within:border-indigo-500 transition-all">
+                <Search size={16} className="text-slate-500 mr-2" />
+                <input
+                  type="text"
+                  value={searchInput}
+                  onChange={(e) => {
+                    setSearchInput(e.target.value);
+                    setIsDropdownOpen(true);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && searchInput.trim()) {
+                      addPill("Keyword", searchInput.trim());
+                    }
+                  }}
+                  onFocus={() => setIsDropdownOpen(true)}
+                  placeholder="e.g. 'React', 'New York', 'Software Engineer'..."
+                  className="w-full bg-transparent text-sm text-slate-200 focus:outline-none placeholder-slate-600"
+                />
+                {searchInput && (
+                  <button onClick={() => setSearchInput("")} className="text-slate-500 hover:text-slate-300 transition-colors">
+                    <X size={14} />
                   </button>
                 )}
               </div>
 
-              {/* Skills Checkboxes Categories */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 bg-[#030514] p-3.5 rounded-xl border border-slate-800 max-h-48 overflow-y-auto">
-                {/* Primary Skills */}
-                <div className="space-y-1.5">
-                  <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block border-b border-slate-800 pb-1">
-                    Primary Skills
-                  </span>
-                  {summaryOptions.primary_skills.length > 0 ? (
-                    summaryOptions.primary_skills.map((s, i) => {
-                      const selectedList = skillInput.split(",").map((item) => item.trim()).filter(Boolean);
-                      const isChecked = selectedList.includes(s);
-
-                      return (
-                        <label key={`ps-chk-${i}`} className="flex items-center gap-2 text-xs text-slate-300 hover:text-white cursor-pointer select-none py-0.5">
-                          <input
-                            type="checkbox"
-                            checked={isChecked}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setSkillInput((prev) => {
-                                  const list = prev.split(",").map((item) => item.trim()).filter(Boolean);
-                                  return [...list, s].join(", ");
-                                });
-                              } else {
-                                setSkillInput((prev) => {
-                                  const list = prev.split(",").map((item) => item.trim()).filter(Boolean);
-                                  return list.filter((item) => item !== s).join(", ");
-                                });
-                              }
-                            }}
-                            className="rounded border-slate-700 bg-slate-900 accent-indigo-600 w-3.5 h-3.5 cursor-pointer"
-                          />
-                          <span className="truncate">{s}</span>
-                        </label>
-                      );
-                    })
+              {/* Autocomplete Dropdown */}
+              {isDropdownOpen && searchInput && (
+                <div className="absolute z-10 w-full mt-1 bg-[#0a0f25] border border-slate-700 rounded-xl shadow-2xl max-h-64 overflow-y-auto">
+                  {suggestions.length > 0 ? (
+                    <ul className="py-2">
+                      {suggestions.map((s, idx) => (
+                        <li
+                          key={idx}
+                          onClick={() => addPill(s.category, s.value)}
+                          className="px-4 py-2 hover:bg-indigo-600/20 cursor-pointer flex flex-col group transition-colors"
+                        >
+                          <span className="text-xs font-bold text-indigo-400 group-hover:text-indigo-300">
+                            {s.category}
+                          </span>
+                          <span className="text-sm text-slate-200 group-hover:text-white">
+                            {s.value} {s.category.includes("Exp") ? "Yrs" : ""}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
                   ) : (
-                    <span className="text-[11px] text-slate-500 block">No skills parsed.</span>
+                    <div className="p-4 text-xs text-slate-500 text-center">
+                      No matching options found.
+                    </div>
                   )}
                 </div>
-
-                {/* Frameworks */}
-                <div className="space-y-1.5">
-                  <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block border-b border-slate-800 pb-1">
-                    Frameworks
-                  </span>
-                  {summaryOptions.frameworks.length > 0 ? (
-                    summaryOptions.frameworks.map((f, i) => {
-                      const selectedList = skillInput.split(",").map((item) => item.trim()).filter(Boolean);
-                      const isChecked = selectedList.includes(f);
-
-                      return (
-                        <label key={`fw-chk-${i}`} className="flex items-center gap-2 text-xs text-slate-300 hover:text-white cursor-pointer select-none py-0.5">
-                          <input
-                            type="checkbox"
-                            checked={isChecked}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setSkillInput((prev) => {
-                                  const list = prev.split(",").map((item) => item.trim()).filter(Boolean);
-                                  return [...list, f].join(", ");
-                                });
-                              } else {
-                                setSkillInput((prev) => {
-                                  const list = prev.split(",").map((item) => item.trim()).filter(Boolean);
-                                  return list.filter((item) => item !== f).join(", ");
-                                });
-                              }
-                            }}
-                            className="rounded border-slate-700 bg-slate-900 accent-indigo-600 w-3.5 h-3.5 cursor-pointer"
-                          />
-                          <span className="truncate">{f}</span>
-                        </label>
-                      );
-                    })
-                  ) : (
-                    <span className="text-[11px] text-slate-500 block">No frameworks parsed.</span>
-                  )}
-                </div>
-
-                {/* Databases */}
-                <div className="space-y-1.5">
-                  <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block border-b border-slate-800 pb-1">
-                    Databases
-                  </span>
-                  {summaryOptions.databases.length > 0 ? (
-                    summaryOptions.databases.map((db, i) => {
-                      const selectedList = skillInput.split(",").map((item) => item.trim()).filter(Boolean);
-                      const isChecked = selectedList.includes(db);
-
-                      return (
-                        <label key={`db-chk-${i}`} className="flex items-center gap-2 text-xs text-slate-300 hover:text-white cursor-pointer select-none py-0.5">
-                          <input
-                            type="checkbox"
-                            checked={isChecked}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setSkillInput((prev) => {
-                                  const list = prev.split(",").map((item) => item.trim()).filter(Boolean);
-                                  return [...list, db].join(", ");
-                                });
-                              } else {
-                                setSkillInput((prev) => {
-                                  const list = prev.split(",").map((item) => item.trim()).filter(Boolean);
-                                  return list.filter((item) => item !== db).join(", ");
-                                });
-                              }
-                            }}
-                            className="rounded border-slate-700 bg-slate-900 accent-indigo-600 w-3.5 h-3.5 cursor-pointer"
-                          />
-                          <span className="truncate">{db}</span>
-                        </label>
-                      );
-                    })
-                  ) : (
-                    <span className="text-[11px] text-slate-500 block">No databases parsed.</span>
-                  )}
-                </div>
-              </div>
+              )}
             </div>
-          </div>
 
-          {/* Active Filter Skills Tags Bar */}
-          <div className="pt-2 border-t border-slate-800/80 flex flex-wrap items-center gap-2">
-            <span className="text-[11px] font-semibold text-slate-400 mr-1">Active Filter Skills:</span>
-            {skillInput ? (
-              <div className="flex flex-wrap gap-1.5 flex-1">
-                {skillInput
-                  .split(",")
-                  .map((item) => item.trim())
-                  .filter(Boolean)
-                  .map((sk, idx) => (
+            {/* Active Pills Display */}
+            <div className="pt-3 flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-slate-400">Active Filters:</span>
+                {pills.length > 0 && (
+                  <button
+                    onClick={clearAllPills}
+                    className="text-[10px] text-rose-400 hover:underline font-semibold cursor-pointer"
+                  >
+                    Clear All
+                  </button>
+                )}
+              </div>
+              
+              <div className="flex flex-wrap gap-2 min-h-[32px]">
+                {pills.length > 0 ? (
+                  pills.map((pill) => (
                     <span
-                      key={idx}
-                      className="bg-indigo-950/80 border border-indigo-700/60 text-indigo-200 text-xs px-2.5 py-0.5 rounded-lg font-semibold flex items-center gap-1.5"
+                      key={pill.id}
+                      className="bg-indigo-950/80 border border-indigo-700/60 text-indigo-200 text-xs px-3 py-1.5 rounded-xl font-semibold flex items-center gap-2 group hover:border-indigo-500 transition-colors"
                     >
-                      {sk}
+                      <span className="opacity-70 text-[10px] uppercase tracking-wider">{pill.category}:</span>
+                      <span>{pill.value} {pill.category.includes("Exp") ? "Yrs" : ""}</span>
                       <button
                         type="button"
-                        onClick={() => {
-                          setSkillInput((prev) => {
-                            const list = prev.split(",").map((item) => item.trim()).filter(Boolean);
-                            return list.filter((item) => item !== sk).join(", ");
-                          });
-                        }}
-                        className="text-indigo-400 hover:text-white font-bold ml-0.5"
+                        onClick={() => removePill(pill.id)}
+                        className="text-indigo-400 hover:text-white font-bold ml-1 flex items-center bg-indigo-900/50 rounded-full p-0.5 group-hover:bg-indigo-500/50 transition-colors"
                       >
-                        ×
+                        <X size={12} />
                       </button>
                     </span>
-                  ))}
+                  ))
+                ) : (
+                  <span className="text-xs text-slate-500 italic mt-1">No filters selected. All candidates will be shown.</span>
+                )}
               </div>
-            ) : (
-              <span className="text-xs text-slate-500 italic">No skill checkboxes selected.</span>
-            )}
+            </div>
           </div>
         </div>
       )}

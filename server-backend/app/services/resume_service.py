@@ -257,13 +257,14 @@ class ResumeService:
     async def filter_resumes(
         self,
         user_id: str,
-        job_title: Optional[str] = None,
+        job_title: Optional[List[str]] = None,
         min_experience: Optional[float] = None,
         max_experience: Optional[float] = None,
-        location: Optional[str] = None,
-        employment_type: Optional[str] = None,
-        year_of_passing: Optional[str] = None,
+        location: Optional[List[str]] = None,
+        employment_type: Optional[List[str]] = None,
+        year_of_passing: Optional[List[str]] = None,
         skills: Optional[List[str]] = None,
+        keywords: Optional[List[str]] = None,
         skip: int = 0,
         limit: int = 100,
     ) -> ResumeListResponse:

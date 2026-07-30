@@ -27,13 +27,14 @@ class ResumeRepository(BaseRepository):
     async def filter_resumes(
         self,
         user_id: str,
-        job_title: Optional[str] = None,
+        job_title: Optional[List[str]] = None,
         min_experience: Optional[float] = None,
         max_experience: Optional[float] = None,
-        location: Optional[str] = None,
-        employment_type: Optional[str] = None,
-        year_of_passing: Optional[str] = None,
+        location: Optional[List[str]] = None,
+        employment_type: Optional[List[str]] = None,
+        year_of_passing: Optional[List[str]] = None,
         skills: Optional[List[str]] = None,
+        keywords: Optional[List[str]] = None,
         skip: int = 0,
         limit: int = 100,
     ) -> List[Dict[str, Any]]:
@@ -42,24 +43,25 @@ class ResumeRepository(BaseRepository):
 
         and_conditions: List[Dict[str, Any]] = [{"user_id": user_id}]
 
-        if job_title and job_title.strip():
-            # Split job title search term to match words individually or full phrase
-            jt_clean = job_title.strip()
-            jt_regex = re.compile(re.escape(jt_clean), re.IGNORECASE)
-            
-            # Match across designation, role, experience entries, primary_skills, or extracted_text fallback
-            and_conditions.append({
-                "$or": [
-                    {"parsed_data.designation": {"$regex": jt_regex}},
-                    {"parsed_data.role": {"$regex": jt_regex}},
-                    {"parsed_data.name": {"$regex": jt_regex}},
-                    {"parsed_data.full_name": {"$regex": jt_regex}},
-                    {"parsed_data.experience.designation": {"$regex": jt_regex}},
-                    {"parsed_data.experience.company": {"$regex": jt_regex}},
-                    {"parsed_data.primary_skills": {"$regex": jt_regex}},
-                    {"extracted_text": {"$regex": jt_regex}},
-                ]
-            })
+        if job_title and any(j.strip() for j in job_title):
+            jt_queries = []
+            for j in job_title:
+                if j.strip():
+                    jt_regex = re.compile(re.escape(j.strip()), re.IGNORECASE)
+                    jt_queries.append({
+                        "$or": [
+                            {"parsed_data.designation": {"$regex": jt_regex}},
+                            {"parsed_data.role": {"$regex": jt_regex}},
+                            {"parsed_data.name": {"$regex": jt_regex}},
+                            {"parsed_data.full_name": {"$regex": jt_regex}},
+                            {"parsed_data.experience.designation": {"$regex": jt_regex}},
+                            {"parsed_data.experience.company": {"$regex": jt_regex}},
+                            {"parsed_data.primary_skills": {"$regex": jt_regex}},
+                            {"extracted_text": {"$regex": jt_regex}},
+                        ]
+                    })
+            if jt_queries:
+                and_conditions.append({"$or": jt_queries})
 
         if min_experience is not None or max_experience is not None:
             exp_query: Dict[str, Any] = {}
@@ -75,43 +77,56 @@ class ResumeRepository(BaseRepository):
                 ]
             })
 
-        if location and location.strip():
-            loc_regex = re.compile(re.escape(location.strip()), re.IGNORECASE)
-            and_conditions.append({
-                "$or": [
-                    {"parsed_data.location": {"$regex": loc_regex}},
-                    {"extracted_text": {"$regex": loc_regex}},
-                ]
-            })
+        if location and any(l.strip() for l in location):
+            loc_queries = []
+            for l in location:
+                if l.strip():
+                    loc_regex = re.compile(re.escape(l.strip()), re.IGNORECASE)
+                    loc_queries.append({
+                        "$or": [
+                            {"parsed_data.location": {"$regex": loc_regex}},
+                            {"extracted_text": {"$regex": loc_regex}},
+                        ]
+                    })
+            if loc_queries:
+                and_conditions.append({"$or": loc_queries})
 
-        if employment_type and employment_type.strip():
-            emp_clean = employment_type.strip()
-            # Handle common variations like "Full Time", "Full-Time", "Fulltime"
-            emp_pattern = re.escape(emp_clean).replace(r"\ ", r"[\s\-_]*")
-            emp_regex = re.compile(emp_pattern, re.IGNORECASE)
+        if employment_type and any(e.strip() for e in employment_type):
+            emp_queries = []
+            for e in employment_type:
+                if e.strip():
+                    emp_clean = e.strip()
+                    emp_pattern = re.escape(emp_clean).replace(r"\ ", r"[\s\-_]*")
+                    emp_regex = re.compile(emp_pattern, re.IGNORECASE)
+                    emp_queries.append({
+                        "$or": [
+                            {"parsed_data.employment_type": {"$regex": emp_regex}},
+                            {"parsed_data.job_type": {"$regex": emp_regex}},
+                            {"extracted_text": {"$regex": emp_regex}},
+                        ]
+                    })
+            if emp_queries:
+                and_conditions.append({"$or": emp_queries})
 
-            and_conditions.append({
-                "$or": [
-                    {"parsed_data.employment_type": {"$regex": emp_regex}},
-                    {"parsed_data.job_type": {"$regex": emp_regex}},
-                    {"extracted_text": {"$regex": emp_regex}},
-                ]
-            })
+        if year_of_passing and any(y.strip() for y in year_of_passing):
+            yop_queries = []
+            for y in year_of_passing:
+                if y.strip():
+                    yop_regex = re.compile(re.escape(y.strip()), re.IGNORECASE)
+                    yop_queries.append({
+                        "$or": [
+                            {"parsed_data.education.year_of_passing": {"$regex": yop_regex}},
+                            {"parsed_data.education.year": {"$regex": yop_regex}},
+                            {"extracted_text": {"$regex": yop_regex}},
+                        ]
+                    })
+            if yop_queries:
+                and_conditions.append({"$or": yop_queries})
 
-        if year_of_passing and year_of_passing.strip():
-            yop_regex = re.compile(re.escape(year_of_passing.strip()), re.IGNORECASE)
-            and_conditions.append({
-                "$or": [
-                    {"parsed_data.education.year_of_passing": {"$regex": yop_regex}},
-                    {"parsed_data.education.year": {"$regex": yop_regex}},
-                    {"extracted_text": {"$regex": yop_regex}},
-                ]
-            })
-
-        if skills:
+        if skills and any(s.strip() for s in skills):
             skill_queries = []
             for s in skills:
-                if s and s.strip():
+                if s.strip():
                     s_regex = re.compile(re.escape(s.strip()), re.IGNORECASE)
                     skill_queries.append({
                         "$or": [
@@ -124,9 +139,18 @@ class ResumeRepository(BaseRepository):
                     })
             if skill_queries:
                 and_conditions.append({"$or": skill_queries})
+                
+        if keywords and any(k.strip() for k in keywords):
+            keyword_queries = []
+            for k in keywords:
+                if k.strip():
+                    k_regex = re.compile(re.escape(k.strip()), re.IGNORECASE)
+                    keyword_queries.append({"extracted_text": {"$regex": k_regex}})
+            if keyword_queries:
+                and_conditions.append({"$or": keyword_queries})
 
         from loguru import logger
-        logger.info(f"[FILTER_RESUMES] Params received -> user_id: {user_id}, job_title: {job_title}, min_exp: {min_experience}, max_exp: {max_experience}, location: {location}, emp_type: {employment_type}, skills: {skills}")
+        logger.info(f"[FILTER_RESUMES] Params received -> user_id: {user_id}, job_title: {job_title}, min_exp: {min_experience}, max_exp: {max_experience}, location: {location}, emp_type: {employment_type}, skills: {skills}, keywords: {keywords}")
 
         final_query = {"$and": and_conditions} if len(and_conditions) > 1 else and_conditions[0]
         logger.info(f"[FILTER_RESUMES] Compiled MongoDB query: {final_query}")

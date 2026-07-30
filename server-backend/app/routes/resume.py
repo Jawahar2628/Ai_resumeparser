@@ -59,13 +59,14 @@ async def list_resumes(
     description="Filter user resumes by job title, experience range, location, employment type, and required skills.",
 )
 async def match_resumes(
-    job_title: str = Query(None, description="Job title or role keyword filter"),
+    job_title: list[str] = Query(None, description="Job title or role keyword filter"),
     min_experience: float = Query(None, ge=0, description="Minimum total years of experience"),
     max_experience: float = Query(None, ge=0, description="Maximum total years of experience"),
-    location: str = Query(None, description="Preferred location or city filter"),
-    employment_type: str = Query(None, description="Employment type (e.g. Full Time, Part Time, Contract)"),
-    year_of_passing: str = Query(None, description="Year of passing graduation filter"),
+    location: list[str] = Query(None, description="Preferred location or city filter"),
+    employment_type: list[str] = Query(None, description="Employment type (e.g. Full Time, Part Time, Contract)"),
+    year_of_passing: list[str] = Query(None, description="Year of passing graduation filter"),
     skills: list[str] = Query(None, description="List of required skills"),
+    keywords: list[str] = Query(None, description="List of keywords to search in full resume text"),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
     current_user: dict = Depends(get_current_active_user),
@@ -80,6 +81,7 @@ async def match_resumes(
         employment_type=employment_type,
         year_of_passing=year_of_passing,
         skills=skills,
+        keywords=keywords,
         skip=skip,
         limit=limit,
     )
