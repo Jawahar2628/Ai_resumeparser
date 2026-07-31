@@ -16,13 +16,22 @@ class ResumeRepository(BaseRepository):
     def __init__(self, db: AsyncIOMotorDatabase):
         super().__init__(db, RESUMES_COLLECTION)
 
+    async def get_by_id(self, id_val: str) -> Optional[Dict[str, Any]]:
+        """Find a single document by string 'id' field, following redirect_id if present."""
+        doc = await super().get_by_id(id_val)
+        if doc and doc.get("redirect_id"):
+            target_doc = await super().get_by_id(doc["redirect_id"])
+            if target_doc:
+                return target_doc
+        return doc
+
     async def get_by_user_id(self, user_id: str, skip: int = 0, limit: int = 100) -> List[Dict[str, Any]]:
         """Fetch list of resumes belonging to specific user."""
-        return await self.find_many(query={"user_id": user_id}, skip=skip, limit=limit, sort_by="upload_date", descending=True)
+        return await self.find_many(query={"user_id": user_id, "redirect_id": {"$exists": False}}, skip=skip, limit=limit, sort_by="upload_date", descending=True)
 
     async def count_by_user_id(self, user_id: str) -> int:
         """Count total resumes uploaded by user."""
-        return await self.count(query={"user_id": user_id})
+        return await self.count(query={"user_id": user_id, "redirect_id": {"$exists": False}})
 
     async def filter_resumes(
         self,
@@ -41,7 +50,7 @@ class ResumeRepository(BaseRepository):
         """Filter resumes based on multiple criteria matching parsed_data fields."""
         import re
 
-        and_conditions: List[Dict[str, Any]] = [{"user_id": user_id}]
+        and_conditions: List[Dict[str, Any]] = [{"user_id": user_id, "redirect_id": {"$exists": False}}]
 
         if job_title and any(j.strip() for j in job_title):
             jt_queries = []
@@ -169,7 +178,7 @@ class ResumeRepository(BaseRepository):
 
     async def find_by_email(self, user_id: str, email: str) -> Optional[Dict[str, Any]]:
         """Check if a parsed resume already exists with this email for the user."""
-        return await self.find_one({"user_id": user_id, "parsed_data.email": email})
+        return await self.find_one({"user_id": user_id, "parsed_data.email": email, "redirect_id": {"$exists": False}})
 
     async def update_status_and_text(self, resume_id: str, status: ResumeStatus, extracted_text: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """Update resume extraction status and extracted text content."""
@@ -207,6 +216,7 @@ class ResumeRepository(BaseRepository):
         query = {
             "user_id": user_id,
             "status": ResumeStatus.PARSED.value,
+            "redirect_id": {"$exists": False},
         }
 
         projection = {

@@ -117,22 +117,6 @@ export default function Upload() {
         throw new Error("Parsing timed out after 5 minutes.");
       }
 
-      if (finalResult.email_conflict) {
-        if (window.confirm("A candidate with this email already exists. Do you want to UPDATE the existing candidate profile? (Click Cancel to keep as a separate new profile)")) {
-          const mergeRes = await fetch(`http://127.0.0.1:8000/api/v1/resumes/${finalResult.id}/merge?existing_resume_id=${finalResult.existing_resume_id}`, {
-            method: 'POST',
-            headers,
-          });
-          const mergeData = await mergeRes.json();
-          if (mergeRes.ok) {
-            finalResult = mergeData.data || mergeData;
-            alert("Candidate profile successfully updated and merged!");
-          } else {
-            alert("Merge failed. Showing as separate profile.");
-          }
-        }
-      }
-
       setIsParsing(false);
       setParsedResponse(finalResult);
       setShowModal(true);

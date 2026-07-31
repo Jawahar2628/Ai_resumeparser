@@ -134,3 +134,11 @@ class ResumeController:
             data=resume_response.model_dump(),
             message="Document added successfully.",
         )
+
+    async def get_resume_logs(self, resume_id: str, user_id: str, is_admin: bool = False) -> JSONResponse:
+        """Process request to fetch version logs for a resume."""
+        logs_response = await self.resume_service.get_resume_logs(resume_id, user_id, is_admin=is_admin)
+        return success_response(
+            data=logs_response.model_dump(),
+            message="Resume logs retrieved successfully.",
+        )

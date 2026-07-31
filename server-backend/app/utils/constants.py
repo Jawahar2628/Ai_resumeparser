@@ -13,6 +13,7 @@ ALLOWED_EXTENSIONS = {"pdf", "doc", "docx"}
 
 USERS_COLLECTION = "users"
 RESUMES_COLLECTION = "resumes"
+RESUME_LOGS_COLLECTION = "resume_logs"
 INTERVIEWS_COLLECTION = "interviews"
 
 ERROR_USER_EXISTS = "User with this email already exists."

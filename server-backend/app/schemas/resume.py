@@ -70,3 +70,27 @@ class ResumeListResponse(BaseModel):
     resumes: List[ResumeResponse]
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ResumeLogResponse(BaseModel):
+    """Resume log snapshot response DTO."""
+
+    id: str
+    resume_id: str
+    user_id: str
+    email: Optional[str] = None
+    old_data: Dict[str, Any]
+    action: str
+    created_at: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ResumeLogListResponse(BaseModel):
+    """List of resume version logs response."""
+
+    total: int
+    logs: List[ResumeLogResponse]
+
+    model_config = ConfigDict(from_attributes=True)
+
