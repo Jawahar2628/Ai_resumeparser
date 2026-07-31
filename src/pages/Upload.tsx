@@ -13,6 +13,7 @@ export default function Upload() {
   
   const [otherDocFile, setOtherDocFile] = useState<File | null>(null);
   const [otherDocType, setOtherDocType] = useState<string>("Cover Letter");
+  const [otherDocTitle, setOtherDocTitle] = useState<string>("");
   const [isUploadingDoc, setIsUploadingDoc] = useState(false);
 
   const steps = [
@@ -69,6 +70,15 @@ export default function Upload() {
       });
 
       const resData = await response.json();
+
+      if (response.status === 401 || (resData.detail && typeof resData.detail === 'string' && 
+          (resData.detail.toLowerCase().includes('token') || resData.detail.toLowerCase().includes('signature') || resData.detail.toLowerCase().includes('authentication')))) {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+        throw new Error('Session expired. Please log in again.');
+      }
 
       if (!response.ok) {
         throw new Error(resData.detail || resData.message || 'Upload failed. Ensure backend is running.');
@@ -167,7 +177,7 @@ export default function Upload() {
       const headers: Record<string, string> = {};
       if (token) headers['Authorization'] = `Bearer ${token}`;
       
-      const res = await fetch(`${RESUME_DOCUMENTS(parsedResponse.id)}?doc_type=${encodeURIComponent(otherDocType)}`, {
+      const res = await fetch(`${RESUME_DOCUMENTS(parsedResponse.id)}?doc_type=${encodeURIComponent(otherDocType)}&doc_title=${encodeURIComponent(otherDocTitle)}`, {
         method: 'POST',
         headers,
         body: formData,
@@ -176,6 +186,7 @@ export default function Upload() {
       if (res.ok) {
         setParsedResponse(data.data || data);
         setOtherDocFile(null);
+        setOtherDocTitle("");
         alert("Document uploaded successfully!");
       } else {
         alert(data.message || "Failed to upload document");
@@ -572,6 +583,13 @@ export default function Upload() {
                   <div className="bg-[#030514] border border-slate-800 p-5 rounded-xl space-y-4">
                     <h5 className="text-xs font-bold text-slate-200">Upload New Document</h5>
                     <div className="flex flex-col md:flex-row gap-4 items-center">
+                      <input 
+                        type="text" 
+                        placeholder="Title (Optional)"
+                        value={otherDocTitle}
+                        onChange={e => setOtherDocTitle(e.target.value)}
+                        className="bg-slate-900 border border-slate-800 text-xs text-white p-2.5 rounded-lg focus:outline-none focus:border-blue-500 w-full md:w-1/4"
+                      />
                       <select 
                         value={otherDocType}
                         onChange={e => setOtherDocType(e.target.value)}
@@ -613,7 +631,7 @@ export default function Upload() {
                                 <Paperclip size={16} />
                               </div>
                               <div className="overflow-hidden">
-                                <p className="text-xs font-bold text-slate-200 truncate">{doc.filename}</p>
+                                <p className="text-xs font-bold text-slate-200 truncate">{doc.title || doc.filename}</p>
                                 <p className="text-[10px] text-slate-400">{doc.doc_type} • {new Date(doc.uploaded_at).toLocaleDateString()}</p>
                               </div>
                             </div>

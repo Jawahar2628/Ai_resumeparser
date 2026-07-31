@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Mail, Phone, MapPin, ChevronDown, CheckCircle2,
-  ExternalLink, User, Award, Brain, Briefcase, GraduationCap, Code, Edit3, X, Save
+  ExternalLink, User, Award, Brain, Briefcase, GraduationCap, Code, Edit3, X, Save, Paperclip, FileText, Upload
 } from "lucide-react";
-import { getResumeById, getResumes, updateResume } from "../utils/Api";
+import { getResumeById, getResumes, updateResume, RESUME_DOCUMENTS } from "../utils/Api";
 
 export default function Evaluation() {
   const { id } = useParams();
@@ -21,6 +21,12 @@ export default function Evaluation() {
   const [isActionsOpen, setIsActionsOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+
+  // Document upload states
+  const [docFile, setDocFile] = useState<File | null>(null);
+  const [docTitle, setDocTitle] = useState("");
+  const [docType, setDocType] = useState("Cover Letter");
+  const [isUploadingDoc, setIsUploadingDoc] = useState(false);
 
   const [editForm, setEditForm] = useState({
     full_name: "",
@@ -162,6 +168,34 @@ export default function Evaluation() {
 
   const activeWeaknesses: string[] = latestHrUpdate?.skill_weaknesses ?? originalSkillWeaknesses;
   const activeUpskilling: string[] = latestHrUpdate?.recommended_upskilling ?? (careerAnalysis.recommended_upskilling || []);
+
+  const handleUploadDoc = async () => {
+    if (!docFile || !candidate?.id) return;
+    setIsUploadingDoc(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", docFile);
+      const token = localStorage.getItem("token") || localStorage.getItem("access_token");
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const res = await fetch(
+        `${RESUME_DOCUMENTS(candidate.id)}?doc_type=${encodeURIComponent(docType)}&doc_title=${encodeURIComponent(docTitle || docFile.name)}`,
+        { method: "POST", headers, body: formData }
+      );
+      const data = await res.json();
+      if (res.ok) {
+        setCandidate(data.data || data);
+        setDocFile(null);
+        setDocTitle("");
+      } else {
+        alert(data.message || "Failed to upload document.");
+      }
+    } catch {
+      alert("Upload failed.");
+    } finally {
+      setIsUploadingDoc(false);
+    }
+  };
 
   const handleOpenEditModal = () => {
     setIsActionsOpen(false);
@@ -959,30 +993,120 @@ export default function Evaluation() {
         )}
 
         {activeTab === "Documents" && (
-          <div className="space-y-4 text-xs">
-            <h3 className="text-sm font-bold text-slate-100">Original Resume Document</h3>
-            {s3Url ? (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 bg-slate-900 rounded-xl border border-slate-800">
-                  <span className="text-slate-300">{candidate?.original_filename || "Resume Document"}</span>
-                  <a
-                    href={s3Url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-indigo-400 hover:text-indigo-300 font-semibold underline flex items-center gap-1"
-                  >
-                    <ExternalLink size={14} /> Open Document
-                  </a>
+          <div className="space-y-6 text-xs">
+            {/* Original Resume */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
+                <FileText size={16} className="text-indigo-400" /> Original Resume
+              </h3>
+              {s3Url ? (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 bg-slate-900 rounded-xl border border-slate-800">
+                    <span className="text-slate-300">{candidate?.original_filename || "Resume Document"}</span>
+                    <a
+                      href={s3Url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-indigo-400 hover:text-indigo-300 font-semibold underline flex items-center gap-1"
+                    >
+                      <ExternalLink size={14} /> Open Document
+                    </a>
+                  </div>
+                  <iframe
+                    src={s3Url}
+                    className="w-full h-[500px] rounded-xl border border-slate-800"
+                    title="Resume Viewer"
+                  />
                 </div>
-                <iframe
-                  src={s3Url}
-                  className="w-full h-[600px] rounded-xl border border-slate-800"
-                  title="Resume Viewer"
-                />
+              ) : (
+                <p className="text-slate-400">No S3 document URL available for this record.</p>
+              )}
+            </div>
+
+            {/* Additional Documents Upload */}
+            <div className="space-y-4 pt-4 border-t border-slate-800">
+              <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
+                <Paperclip size={16} className="text-indigo-400" /> Additional Documents
+              </h3>
+
+              {/* Upload Form */}
+              <div className="bg-slate-900/60 border border-slate-800 p-5 rounded-xl space-y-4">
+                <h4 className="text-xs font-bold text-slate-200">Upload New Document</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-slate-400 mb-1 font-semibold">Title</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. AWS Certification, Offer Letter"
+                      value={docTitle}
+                      onChange={e => setDocTitle(e.target.value)}
+                      className="w-full bg-[#030514] border border-slate-700 text-xs text-white p-2.5 rounded-lg focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-400 mb-1 font-semibold">Document Type</label>
+                    <select
+                      value={docType}
+                      onChange={e => setDocType(e.target.value)}
+                      className="w-full bg-[#030514] border border-slate-700 text-xs text-white p-2.5 rounded-lg focus:outline-none focus:border-indigo-500"
+                    >
+                      <option value="Cover Letter">Cover Letter</option>
+                      <option value="ID Proof">ID Proof</option>
+                      <option value="Certification">Certification</option>
+                      <option value="Previous Resume">Previous Resume</option>
+                      <option value="Offer Letter">Offer Letter</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-3 items-center">
+                  <input
+                    type="file"
+                    onChange={e => e.target.files && setDocFile(e.target.files[0])}
+                    className="text-xs text-slate-300 flex-1 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-700 cursor-pointer"
+                  />
+                  <button
+                    onClick={handleUploadDoc}
+                    disabled={!docFile || isUploadingDoc}
+                    className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white px-5 py-2.5 rounded-lg text-xs font-bold transition-colors whitespace-nowrap"
+                  >
+                    <Upload size={14} />
+                    {isUploadingDoc ? "Uploading..." : "Upload Document"}
+                  </button>
+                </div>
               </div>
-            ) : (
-              <p className="text-slate-400">No S3 document URL available for this record.</p>
-            )}
+
+              {/* Uploaded Documents List */}
+              {(candidate?.other_documents || []).length === 0 ? (
+                <p className="text-slate-500 italic">No additional documents uploaded yet.</p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {(candidate?.other_documents || []).map((doc: any, idx: number) => (
+                    <div key={idx} className="bg-slate-900/50 border border-slate-800 p-4 rounded-xl flex items-center justify-between">
+                      <div className="flex items-center gap-3 overflow-hidden">
+                        <div className="bg-indigo-900/30 p-2 rounded-lg text-indigo-400 flex-shrink-0">
+                          <Paperclip size={16} />
+                        </div>
+                        <div className="overflow-hidden">
+                          <p className="text-xs font-bold text-slate-200 truncate">{doc.title || doc.filename}</p>
+                          <p className="text-[10px] text-slate-400">{doc.doc_type} • {new Date(doc.uploaded_at).toLocaleDateString()}</p>
+                        </div>
+                      </div>
+                      {doc.s3_url && (
+                        <a
+                          href={doc.s3_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-indigo-400 hover:text-indigo-300 bg-indigo-900/20 p-2 rounded-lg transition-colors flex-shrink-0"
+                        >
+                          <ExternalLink size={14} />
+                        </a>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>

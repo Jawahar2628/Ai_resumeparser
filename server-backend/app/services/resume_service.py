@@ -523,7 +523,7 @@ class ResumeService:
         
         return ResumeResponse.model_validate(updated_doc)
 
-    async def upload_additional_document(self, resume_id: str, user_id: str, file: UploadFile, doc_type: str, is_admin: bool = False) -> ResumeResponse:
+    async def upload_additional_document(self, resume_id: str, user_id: str, file: UploadFile, doc_type: str, doc_title: Optional[str] = None, is_admin: bool = False) -> ResumeResponse:
         """Upload an auxiliary document to a candidate profile."""
         resume = await self.resume_repo.get_by_id(resume_id)
         if not resume:
@@ -549,6 +549,7 @@ class ResumeService:
         s3_url = self.s3_service.upload_file(content, unique_filename, content_type)
         
         new_doc = {
+            "title": doc_title or original_filename,
             "filename": original_filename,
             "s3_url": s3_url,
             "doc_type": doc_type,

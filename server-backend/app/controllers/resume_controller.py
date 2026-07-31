@@ -2,6 +2,7 @@
 Resume controller handling HTTP requests for resume upload, retrieval, text extraction, and deletion.
 """
 
+from typing import Optional
 from fastapi import UploadFile, status, BackgroundTasks
 from fastapi.responses import JSONResponse
 from app.schemas.resume import ResumeUpdateRequest
@@ -126,9 +127,9 @@ class ResumeController:
             message="Resumes merged successfully.",
         )
 
-    async def add_document(self, resume_id: str, file: UploadFile, doc_type: str, user_id: str, is_admin: bool = False) -> JSONResponse:
+    async def add_document(self, resume_id: str, file: UploadFile, doc_type: str, user_id: str, doc_title: Optional[str] = None, is_admin: bool = False) -> JSONResponse:
         """Process request to upload an additional document to a candidate profile."""
-        resume_response = await self.resume_service.upload_additional_document(resume_id, user_id, file, doc_type, is_admin=is_admin)
+        resume_response = await self.resume_service.upload_additional_document(resume_id, user_id, file, doc_type, doc_title=doc_title, is_admin=is_admin)
         return success_response(
             data=resume_response.model_dump(),
             message="Document added successfully.",

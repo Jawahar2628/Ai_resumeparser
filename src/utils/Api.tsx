@@ -1,4 +1,4 @@
-export const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api/v1";
 
 export const RESUME_UPLOAD = `${BASE_URL}/resumes/upload`;
 export const RESUME_LIST = `${BASE_URL}/resumes`;
@@ -13,7 +13,8 @@ export const AUTH_REGISTER = `${BASE_URL}/auth/register`;
 export const AUTH_REFRESH = `${BASE_URL}/auth/refresh`;
 
 export const USER_ME = `${BASE_URL}/users/me`;
-
+export const SETTINGS_EMAIL = `${BASE_URL}/settings/email`;
+export const SETTINGS_EMAIL_TEST = `${BASE_URL}/settings/email/test`;
 export interface LoginPayload {
   email: string;
   password: string;
@@ -48,18 +49,18 @@ export interface AuthSuccessResult {
 }
 
 const handleAuthError = (response: Response, resData: any) => {
-  if (
-    response.status === 401 ||
-    resData?.detail === "Token has expired." ||
-    resData?.message === "Token has expired." ||
-    (typeof resData?.detail === "string" && resData.detail.toLowerCase().includes("token")) ||
-    (typeof resData?.message === "string" && resData.message.toLowerCase().includes("token expired"))
-  ) {
+  const isUnauthorized = response.status === 401;
+  const detail = typeof resData?.detail === "string" ? resData.detail.toLowerCase() : "";
+  const message = typeof resData?.message === "string" ? resData.message.toLowerCase() : "";
+  const isAuthError = detail.includes("token") || detail.includes("signature") || detail.includes("authentication") ||
+    message.includes("token") || message.includes("signature") || message.includes("authentication");
+
+  if (isUnauthorized || isAuthError) {
     localStorage.removeItem("access_token");
     localStorage.removeItem("refresh_token");
     localStorage.removeItem("user");
     window.location.href = "/login";
-    throw new Error("Token has expired. Redirecting to login...");
+    throw new Error("Session expired. Redirecting to login...");
   }
 };
 

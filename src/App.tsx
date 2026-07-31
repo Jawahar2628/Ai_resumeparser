@@ -11,6 +11,7 @@ import InterviewDashboard from "./pages/InterviewDashboard";
 import ClientFeedback from "./pages/ClientFeedback";
 import AnalyticsReports from "./pages/AnalyticsReports";
 import Login from "./pages/Login";
+import Settings from "./pages/Settings";
 
 export default function App() {
   return (
@@ -37,6 +38,7 @@ export default function App() {
                       <Route path="/interview-dashboard" element={<InterviewDashboard />} />
                       <Route path="/client-feedback" element={<ClientFeedback />} />
                       <Route path="/analytics" element={<AnalyticsReports />} />
+                      <Route path="/settings" element={<Settings />} />
                     </Routes>
                   </div>
                 </main>
