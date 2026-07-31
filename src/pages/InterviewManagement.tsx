@@ -82,6 +82,19 @@ export default function InterviewManagement() {
     joining_date: "",
     interview_document_files: "",
     recommendation: "Pending",
+    rating: 4,
+    feedback: "",
+    strengths: "",
+    weaknesses: "",
+    // Client Feedback fields
+    client_name: "",
+    client_rating: 4,
+    client_feedback: "",
+    client_strengths: "",
+    client_weaknesses: "",
+    client_recommendation: "Selected",
+    client_notes: "",
+    client_feedback_date: "",
     status: "SCHEDULED" as InterviewStatusEnum,
     notes: "",
   });
@@ -92,12 +105,25 @@ export default function InterviewManagement() {
     reason: "",
   });
 
+  const [feedbackTab, setFeedbackTab] = useState<"INTERVIEWER" | "CLIENT">("INTERVIEWER");
+
   const [feedbackForm, setFeedbackForm] = useState({
+    // Interviewer Round Feedback
     rating: 4,
     feedback: "",
     strengths: "",
     weaknesses: "",
     recommendation: "Selected",
+    // Client Feedback
+    client_name: "",
+    client_rating: 4,
+    client_feedback: "",
+    client_strengths: "",
+    client_weaknesses: "",
+    client_recommendation: "Selected",
+    client_notes: "",
+    client_feedback_date: new Date().toISOString().split("T")[0],
+    // Shared Candidate Info & Outcomes
     candidate_requested_date: "",
     candidate_requested_time: "",
     candidate_requested_role: "",
@@ -295,6 +321,18 @@ export default function InterviewManagement() {
       joining_date: item.joining_date || "",
       interview_document_files: item.interview_document_files ? item.interview_document_files.join("\n") : "",
       recommendation: item.recommendation || "Pending",
+      rating: item.rating || 4,
+      feedback: item.feedback || "",
+      strengths: item.strengths ? item.strengths.join(", ") : "",
+      weaknesses: item.weaknesses ? item.weaknesses.join(", ") : "",
+      client_name: item.client_name || "",
+      client_rating: item.client_rating || 4,
+      client_feedback: item.client_feedback || "",
+      client_strengths: item.client_strengths ? item.client_strengths.join(", ") : "",
+      client_weaknesses: item.client_weaknesses ? item.client_weaknesses.join(", ") : "",
+      client_recommendation: item.client_recommendation || "Selected",
+      client_notes: item.client_notes || "",
+      client_feedback_date: item.client_feedback_date || "",
       status: item.status || "SCHEDULED",
       notes: item.notes || "",
     });
@@ -339,6 +377,18 @@ export default function InterviewManagement() {
         joining_date: editForm.joining_date || undefined,
         interview_document_files: docFilesArray,
         recommendation: editForm.recommendation || undefined,
+        rating: editForm.rating ? Number(editForm.rating) : undefined,
+        feedback: editForm.feedback || undefined,
+        strengths: editForm.strengths ? editForm.strengths.split(",").map((s) => s.trim()).filter(Boolean) : undefined,
+        weaknesses: editForm.weaknesses ? editForm.weaknesses.split(",").map((s) => s.trim()).filter(Boolean) : undefined,
+        client_name: editForm.client_name || undefined,
+        client_rating: editForm.client_rating ? Number(editForm.client_rating) : undefined,
+        client_feedback: editForm.client_feedback || undefined,
+        client_strengths: editForm.client_strengths ? editForm.client_strengths.split(",").map((s) => s.trim()).filter(Boolean) : undefined,
+        client_weaknesses: editForm.client_weaknesses ? editForm.client_weaknesses.split(",").map((s) => s.trim()).filter(Boolean) : undefined,
+        client_recommendation: editForm.client_recommendation || undefined,
+        client_notes: editForm.client_notes || undefined,
+        client_feedback_date: editForm.client_feedback_date || undefined,
         status: editForm.status,
         notes: editForm.notes || undefined,
       });
@@ -388,12 +438,21 @@ export default function InterviewManagement() {
   // Open Feedback Modal
   const handleOpenFeedback = (item: InterviewItem) => {
     setSelectedInterview(item);
+    setFeedbackTab("INTERVIEWER");
     setFeedbackForm({
       rating: item.rating || 4,
       feedback: item.feedback || "",
       strengths: item.strengths ? item.strengths.join(", ") : "",
       weaknesses: item.weaknesses ? item.weaknesses.join(", ") : "",
       recommendation: item.recommendation || "Selected",
+      client_name: item.client_name || "",
+      client_rating: item.client_rating || 4,
+      client_feedback: item.client_feedback || "",
+      client_strengths: item.client_strengths ? item.client_strengths.join(", ") : "",
+      client_weaknesses: item.client_weaknesses ? item.client_weaknesses.join(", ") : "",
+      client_recommendation: item.client_recommendation || "Selected",
+      client_notes: item.client_notes || "",
+      client_feedback_date: item.client_feedback_date || new Date().toISOString().split("T")[0],
       candidate_requested_date: item.candidate_requested_date || "",
       candidate_requested_time: item.candidate_requested_time || "",
       candidate_requested_role: item.candidate_requested_role || "",
@@ -417,10 +476,18 @@ export default function InterviewManagement() {
 
       await submitInterviewFeedback(selectedInterview.id, {
         rating: Number(feedbackForm.rating),
-        feedback: feedbackForm.feedback,
+        feedback: feedbackForm.feedback || undefined,
         strengths: feedbackForm.strengths ? feedbackForm.strengths.split(",").map((s) => s.trim()).filter(Boolean) : [],
         weaknesses: feedbackForm.weaknesses ? feedbackForm.weaknesses.split(",").map((s) => s.trim()).filter(Boolean) : [],
-        recommendation: feedbackForm.recommendation,
+        recommendation: feedbackForm.recommendation || undefined,
+        client_name: feedbackForm.client_name || undefined,
+        client_rating: feedbackForm.client_rating ? Number(feedbackForm.client_rating) : undefined,
+        client_feedback: feedbackForm.client_feedback || undefined,
+        client_strengths: feedbackForm.client_strengths ? feedbackForm.client_strengths.split(",").map((s) => s.trim()).filter(Boolean) : [],
+        client_weaknesses: feedbackForm.client_weaknesses ? feedbackForm.client_weaknesses.split(",").map((s) => s.trim()).filter(Boolean) : [],
+        client_recommendation: feedbackForm.client_recommendation || undefined,
+        client_notes: feedbackForm.client_notes || undefined,
+        client_feedback_date: feedbackForm.client_feedback_date || undefined,
         candidate_requested_date: feedbackForm.candidate_requested_date || undefined,
         candidate_requested_time: feedbackForm.candidate_requested_time || undefined,
         candidate_requested_role: feedbackForm.candidate_requested_role || undefined,
@@ -498,9 +565,8 @@ export default function InterviewManagement() {
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`text-xs font-bold transition-colors whitespace-nowrap relative pb-4 -mb-4 cursor-pointer ${
-                activeTab === tab ? "text-blue-400" : "text-slate-400 hover:text-slate-200"
-              }`}
+              className={`text-xs font-bold transition-colors whitespace-nowrap relative pb-4 -mb-4 cursor-pointer ${activeTab === tab ? "text-blue-400" : "text-slate-400 hover:text-slate-200"
+                }`}
             >
               {tab}
               {activeTab === tab && (
@@ -540,6 +606,7 @@ export default function InterviewManagement() {
                   <th className="py-3 px-3">Type & Round</th>
                   <th className="py-3 px-3">Date & Time</th>
                   <th className="py-3 px-3">HR Verification</th>
+                  <th className="py-3 px-3">Round & Client Feedback</th>
                   <th className="py-3 px-3">Salary & Joining</th>
                   <th className="py-3 px-3">Documents</th>
                   <th className="py-3 px-3">Status</th>
@@ -568,13 +635,49 @@ export default function InterviewManagement() {
                       )}
                     </td>
                     <td className="py-3.5 px-3">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
-                        row.hr_call_verification === "Verified"
-                          ? "bg-emerald-950/80 text-emerald-300 border border-emerald-800/50"
-                          : "bg-slate-800 text-slate-300 border border-slate-700"
-                      }`}>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${row.hr_call_verification === "Verified"
+                        ? "bg-emerald-950/80 text-emerald-300 border border-emerald-800/50"
+                        : "bg-slate-800 text-slate-300 border border-slate-700"
+                        }`}>
                         {row.hr_call_verification || "Pending"}
                       </span>
+                    </td>
+                    <td className="py-3.5 px-3 min-w-[200px]">
+                      <div className="space-y-1.5">
+                        {/* Interviewer Round Feedback */}
+                        <div className="flex items-center gap-1.5 text-[10px]">
+                          <span className="bg-indigo-950/90 text-indigo-300 border border-indigo-700/60 text-[9px] font-bold px-1.5 py-0.5 rounded">
+                            Interviewer
+                          </span>
+                          <span className="text-amber-400 font-bold">⭐ {row.rating ? `${row.rating}/5` : "No Rating"}</span>
+                          {row.recommendation && (
+                            <span className="bg-slate-800 text-slate-300 border border-slate-700 px-1.5 py-0.2 rounded text-[9px] font-semibold">
+                              {row.recommendation}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Client Feedback */}
+                        <div className="flex items-center gap-1.5 text-[10px]">
+                          <span className="bg-teal-950/90 text-teal-300 border border-teal-700/60 text-[9px] font-bold px-1.5 py-0.5 rounded">
+                            Client
+                          </span>
+                          {row.client_rating || row.client_recommendation || row.client_name ? (
+                            <>
+                              <span className="text-teal-200 font-bold">
+                                {row.client_name ? `${row.client_name}: ` : ""}⭐ {row.client_rating ? `${row.client_rating}/5` : "-"}
+                              </span>
+                              {row.client_recommendation && (
+                                <span className="bg-teal-900/60 text-teal-300 border border-teal-700/60 px-1.5 py-0.2 rounded text-[9px] font-semibold">
+                                  {row.client_recommendation}
+                                </span>
+                              )}
+                            </>
+                          ) : (
+                            <span className="text-slate-500 italic">Pending</span>
+                          )}
+                        </div>
+                      </div>
                     </td>
                     <td className="py-3.5 px-3 text-slate-300">
                       {row.salary_requested && (
@@ -1019,7 +1122,7 @@ export default function InterviewManagement() {
       {isEditOpen && selectedInterview && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4 font-sans animate-in fade-in duration-200">
           <div className="bg-gradient-to-b from-[#0e1338] via-[#090d29] to-[#050719] border border-indigo-500/40 rounded-3xl w-full max-w-3xl max-h-[92vh] overflow-y-auto p-6 md:p-8 space-y-6 shadow-[0_0_60px_rgba(79,70,229,0.25)] relative">
-            
+
             {/* Modal Header */}
             <div className="flex justify-between items-start border-b border-indigo-500/20 pb-4">
               <div className="flex items-center gap-3">
@@ -1050,7 +1153,7 @@ export default function InterviewManagement() {
             </div>
 
             <form onSubmit={handleEditSubmit} className="space-y-6 text-xs">
-              
+
               {/* SECTION 1: CANDIDATE & JOB SETUP (INDIGO THEME) */}
               <div className="bg-[#121842]/60 border border-indigo-500/30 rounded-2xl p-4 space-y-3 shadow-inner">
                 <div className="flex items-center justify-between border-b border-indigo-500/20 pb-2">
@@ -1405,6 +1508,78 @@ export default function InterviewManagement() {
                 </div>
               </div>
 
+              {/* CLIENT FEEDBACK CARD IN EDIT MODAL */}
+              <div className="bg-[#0b242a]/60 border border-teal-500/30 rounded-2xl p-4 space-y-3 shadow-inner">
+                <div className="flex items-center gap-2 text-teal-300 font-bold text-xs border-b border-teal-500/20 pb-2">
+                  <Building2 size={15} />
+                  <span>Client Feedback Option Details</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-slate-300 mb-1 font-semibold">Client Name / Evaluator</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Acme Corp / John Client"
+                      value={editForm.client_name}
+                      onChange={(e) => setEditForm({ ...editForm, client_name: e.target.value })}
+                      className="w-full bg-[#05081c] border border-teal-900/80 rounded-xl px-3.5 py-2 text-slate-100 font-medium focus:outline-none focus:border-teal-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-300 mb-1 font-semibold">Client Feedback Date</label>
+                    <input
+                      type="date"
+                      value={editForm.client_feedback_date}
+                      onChange={(e) => setEditForm({ ...editForm, client_feedback_date: e.target.value })}
+                      className="w-full bg-[#05081c] border border-teal-900/80 rounded-xl px-3.5 py-2 text-slate-100 font-medium focus:outline-none focus:border-teal-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-slate-300 mb-1 font-semibold">Client Rating (1-5)</label>
+                    <input
+                      type="number"
+                      step="0.5"
+                      min="1"
+                      max="5"
+                      value={editForm.client_rating}
+                      onChange={(e) => setEditForm({ ...editForm, client_rating: Number(e.target.value) })}
+                      className="w-full bg-[#05081c] border border-teal-900/80 rounded-xl px-3.5 py-2 text-slate-100 font-bold focus:outline-none focus:border-teal-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-300 mb-1 font-semibold">Client Outcome</label>
+                    <select
+                      value={editForm.client_recommendation}
+                      onChange={(e) => setEditForm({ ...editForm, client_recommendation: e.target.value })}
+                      className="w-full bg-[#05081c] border border-teal-900/80 rounded-xl px-3.5 py-2 text-teal-300 font-bold focus:outline-none focus:border-teal-500"
+                    >
+                      <option value="Selected">🟢 Client Approved</option>
+                      <option value="Rejected">🔴 Client Rejected</option>
+                      <option value="Next Round">🔄 Next Round</option>
+                      <option value="Hold">🟣 On Hold</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-slate-300 mb-1 font-semibold">Client Detailed Feedback</label>
+                  <textarea
+                    rows={2}
+                    value={editForm.client_feedback}
+                    onChange={(e) => setEditForm({ ...editForm, client_feedback: e.target.value })}
+                    placeholder="Enter client detailed feedback notes..."
+                    className="w-full bg-[#05081c] border border-teal-900/80 rounded-xl px-3.5 py-2 text-slate-100 font-medium focus:outline-none focus:border-teal-500"
+                  />
+                </div>
+              </div>
+
+
               {/* SECTION 5: DOCUMENTS & UPLOAD & NOTES (ROSE THEME) */}
               <div className="bg-[#240b19]/60 border border-rose-500/30 rounded-2xl p-4 space-y-3 shadow-inner">
                 <div className="flex items-center justify-between border-b border-rose-500/20 pb-2">
@@ -1562,11 +1737,11 @@ export default function InterviewManagement() {
         </div>
       )}
 
-      {/* RATING & FEEDBACK MODAL (UPGRADED WITH CANDIDATE OUTCOMES & DOCUMENTS) */}
+      {/* RATING & FEEDBACK MODAL (DUAL OPTION: INTERVIEWER ROUND FEEDBACK & CLIENT FEEDBACK) */}
       {isFeedbackOpen && selectedInterview && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4 font-sans animate-in fade-in duration-200">
-          <div className="bg-gradient-to-b from-[#0e1338] via-[#090d29] to-[#050719] border border-emerald-500/40 rounded-3xl w-full max-w-2xl max-h-[92vh] overflow-y-auto p-6 md:p-8 space-y-6 shadow-[0_0_60px_rgba(16,185,129,0.2)] relative">
-            
+          <div className="bg-gradient-to-b from-[#0e1338] via-[#090d29] to-[#050719] border border-emerald-500/40 rounded-3xl w-full max-w-3xl max-h-[92vh] overflow-y-auto p-6 md:p-8 space-y-6 shadow-[0_0_60px_rgba(16,185,129,0.2)] relative">
+
             {/* Header */}
             <div className="flex justify-between items-start border-b border-emerald-500/20 pb-4">
               <div className="flex items-center gap-3">
@@ -1576,14 +1751,14 @@ export default function InterviewManagement() {
                 <div>
                   <div className="flex items-center gap-2">
                     <h2 className="text-lg font-bold text-white tracking-wide">
-                      Submit Rating & Feedback
+                      Submit Round & Client Feedback
                     </h2>
                     <span className="bg-emerald-950/80 border border-emerald-700/60 text-emerald-300 text-[11px] font-bold px-2.5 py-0.5 rounded-full">
-                      {selectedInterview.candidate_name}
+                      {selectedInterview.candidate_name} ({selectedInterview.interview_type} - Round {selectedInterview.round_number})
                     </span>
                   </div>
                   <p className="text-xs text-emerald-300/80 mt-0.5">
-                    Evaluate interview performance and complete candidate job expectations and documents
+                    Evaluate candidate per interview round & type, or submit detailed client feedback
                   </p>
                 </div>
               </div>
@@ -1595,84 +1770,230 @@ export default function InterviewManagement() {
               </button>
             </div>
 
+            {/* TAB SELECTOR: INTERVIEWER ROUND FEEDBACK vs CLIENT FEEDBACK */}
+            <div className="flex items-center gap-3 bg-[#05081c] p-1.5 rounded-2xl border border-slate-800">
+              <button
+                type="button"
+                onClick={() => setFeedbackTab("INTERVIEWER")}
+                className={`flex-1 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer ${feedbackTab === "INTERVIEWER"
+                  ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-600/30"
+                  : "text-slate-400 hover:text-slate-200"
+                  }`}
+              >
+                <UserCheck size={16} />
+                Interviewer Round Feedback ({selectedInterview.interview_type} R{selectedInterview.round_number})
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setFeedbackTab("CLIENT")}
+                className={`flex-1 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer ${feedbackTab === "CLIENT"
+                  ? "bg-gradient-to-r from-teal-600 to-cyan-600 text-white shadow-lg shadow-teal-600/30"
+                  : "text-slate-400 hover:text-slate-200"
+                  }`}
+              >
+                <Building2 size={16} />
+                Client Feedback Option
+              </button>
+            </div>
+
             <form onSubmit={handleFeedbackSubmit} className="space-y-5 text-xs">
-              
-              {/* CORE PERFORMANCE EVALUATION CARD */}
-              <div className="bg-[#0f2420]/60 border border-emerald-500/20 rounded-2xl p-4 space-y-3 shadow-inner">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-slate-300 mb-1 font-semibold">Rating Score (1.0 to 5.0)</label>
-                    <input
-                      type="number"
-                      step="0.5"
-                      min="1"
-                      max="5"
-                      value={feedbackForm.rating}
-                      onChange={(e) => setFeedbackForm({ ...feedbackForm, rating: Number(e.target.value) })}
-                      className="w-full bg-[#05081c] border border-emerald-900/80 rounded-xl px-3.5 py-2.5 text-slate-100 font-bold focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
-                      required
-                    />
+
+              {/* TAB 1: INTERVIEWER / ROUND EVALUATION CARD */}
+              {feedbackTab === "INTERVIEWER" && (
+                <div className="bg-[#0f2420]/60 border border-emerald-500/30 rounded-2xl p-5 space-y-4 shadow-inner">
+                  <div className="flex items-center justify-between border-b border-emerald-500/20 pb-2">
+                    <div className="flex items-center gap-2 text-emerald-400 font-bold text-xs">
+                      <Sparkles size={15} />
+                      <span>{selectedInterview.interview_type.replace("_", " ")} - Round {selectedInterview.round_number} Performance Evaluation</span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-slate-300 mb-1 font-semibold">Interviewer Rating (1.0 to 5.0)</label>
+                      <input
+                        type="number"
+                        step="0.5"
+                        min="1"
+                        max="5"
+                        value={feedbackForm.rating}
+                        onChange={(e) => setFeedbackForm({ ...feedbackForm, rating: Number(e.target.value) })}
+                        className="w-full bg-[#05081c] border border-emerald-900/80 rounded-xl px-3.5 py-2.5 text-slate-100 font-bold focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
+                        🏆 Round Outcome Status
+                      </label>
+                      <select
+                        value={feedbackForm.recommendation}
+                        onChange={(e) => setFeedbackForm({ ...feedbackForm, recommendation: e.target.value })}
+                        className="w-full bg-[#05081c] border border-emerald-900/80 rounded-xl px-3.5 py-2.5 text-emerald-300 font-bold focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                      >
+                        <option value="Selected">🟢 Selected (Passed Round)</option>
+                        <option value="Rejected">🔴 Rejected (Not Suitable)</option>
+                        <option value="Pending">🟡 Pending Decision</option>
+                        <option value="Hold">🟣 On Hold</option>
+                      </select>
+                    </div>
                   </div>
 
                   <div>
-                    <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
-                      🏆 Selection Outcome Status
-                    </label>
-                    <select
-                      value={feedbackForm.recommendation}
-                      onChange={(e) => setFeedbackForm({ ...feedbackForm, recommendation: e.target.value })}
-                      className="w-full bg-[#05081c] border border-emerald-900/80 rounded-xl px-3.5 py-2.5 text-emerald-300 font-bold focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
-                    >
-                      <option value="Selected">🟢 Selected (Approved for Hiring)</option>
-                      <option value="Rejected">🔴 Rejected (Not Suitable)</option>
-                      <option value="Pending">🟡 Pending Decision</option>
-                      <option value="Hold">🟣 On Hold</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-slate-300 mb-1 font-semibold">Detailed Feedback</label>
-                  <textarea
-                    rows={3}
-                    value={feedbackForm.feedback}
-                    onChange={(e) => setFeedbackForm({ ...feedbackForm, feedback: e.target.value })}
-                    placeholder="Provide technical evaluation feedback, communication notes, and overall decision..."
-                    className="w-full bg-[#05081c] border border-emerald-900/80 rounded-xl px-3.5 py-2 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
-                    required
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-slate-300 mb-1 font-semibold">Candidate Strengths (Comma-separated)</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. System Design, React"
-                      value={feedbackForm.strengths}
-                      onChange={(e) => setFeedbackForm({ ...feedbackForm, strengths: e.target.value })}
+                    <label className="block text-slate-300 mb-1 font-semibold">Interviewer Round Feedback</label>
+                    <textarea
+                      rows={3}
+                      value={feedbackForm.feedback}
+                      onChange={(e) => setFeedbackForm({ ...feedbackForm, feedback: e.target.value })}
+                      placeholder="Provide technical round evaluation, coding skills, domain questions, communication..."
                       className="w-full bg-[#05081c] border border-emerald-900/80 rounded-xl px-3.5 py-2 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
                     />
                   </div>
 
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-slate-300 mb-1 font-semibold">Candidate Strengths (Comma-separated)</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Problem Solving, Architecture, React"
+                        value={feedbackForm.strengths}
+                        onChange={(e) => setFeedbackForm({ ...feedbackForm, strengths: e.target.value })}
+                        className="w-full bg-[#05081c] border border-emerald-900/80 rounded-xl px-3.5 py-2 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-300 mb-1 font-semibold">Areas for Improvement (Comma-separated)</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. System Design edge cases, Microservices"
+                        value={feedbackForm.weaknesses}
+                        onChange={(e) => setFeedbackForm({ ...feedbackForm, weaknesses: e.target.value })}
+                        className="w-full bg-[#05081c] border border-emerald-900/80 rounded-xl px-3.5 py-2 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 2: CLIENT FEEDBACK CARD */}
+              {feedbackTab === "CLIENT" && (
+                <div className="bg-[#0b242a]/60 border border-teal-500/30 rounded-2xl p-5 space-y-4 shadow-inner">
+                  <div className="flex items-center justify-between border-b border-teal-500/20 pb-2">
+                    <div className="flex items-center gap-2 text-teal-300 font-bold text-xs">
+                      <Building2 size={15} />
+                      <span>Client Evaluation & Feedback Details</span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-slate-300 mb-1 font-semibold">Client Company / Evaluator Name</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Acme Corp / John Manager"
+                        value={feedbackForm.client_name}
+                        onChange={(e) => setFeedbackForm({ ...feedbackForm, client_name: e.target.value })}
+                        className="w-full bg-[#05081c] border border-teal-900/80 rounded-xl px-3.5 py-2.5 text-slate-100 font-medium focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
+                        <Calendar size={13} className="text-teal-400" /> Client Feedback Date
+                      </label>
+                      <input
+                        type="date"
+                        value={feedbackForm.client_feedback_date}
+                        onChange={(e) => setFeedbackForm({ ...feedbackForm, client_feedback_date: e.target.value })}
+                        className="w-full bg-[#05081c] border border-teal-900/80 rounded-xl px-3.5 py-2.5 text-slate-100 font-medium focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-slate-300 mb-1 font-semibold">Client Rating Score (1.0 to 5.0)</label>
+                      <input
+                        type="number"
+                        step="0.5"
+                        min="1"
+                        max="5"
+                        value={feedbackForm.client_rating}
+                        onChange={(e) => setFeedbackForm({ ...feedbackForm, client_rating: Number(e.target.value) })}
+                        className="w-full bg-[#05081c] border border-teal-900/80 rounded-xl px-3.5 py-2.5 text-slate-100 font-bold focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-300 mb-1 font-semibold">Client Recommendation Outcome</label>
+                      <select
+                        value={feedbackForm.client_recommendation}
+                        onChange={(e) => setFeedbackForm({ ...feedbackForm, client_recommendation: e.target.value })}
+                        className="w-full bg-[#05081c] border border-teal-900/80 rounded-xl px-3.5 py-2.5 text-teal-300 font-bold focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all"
+                      >
+                        <option value="Selected">🟢 Client Approved / Selected</option>
+                        <option value="Rejected">🔴 Client Rejected</option>
+                        <option value="Next Round">🔄 Recommended Next Round</option>
+                        <option value="Hold">🟣 Client On Hold</option>
+                      </select>
+                    </div>
+                  </div>
+
                   <div>
-                    <label className="block text-slate-300 mb-1 font-semibold">Areas for Improvement (Comma-separated)</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. System Design, Kafka"
-                      value={feedbackForm.weaknesses}
-                      onChange={(e) => setFeedbackForm({ ...feedbackForm, weaknesses: e.target.value })}
-                      className="w-full bg-[#05081c] border border-emerald-900/80 rounded-xl px-3.5 py-2 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                    <label className="block text-slate-300 mb-1 font-semibold">Client Detailed Feedback</label>
+                    <textarea
+                      rows={3}
+                      value={feedbackForm.client_feedback}
+                      onChange={(e) => setFeedbackForm({ ...feedbackForm, client_feedback: e.target.value })}
+                      placeholder="Enter client review comments, client feedback, project fit, client rating details..."
+                      className="w-full bg-[#05081c] border border-teal-900/80 rounded-xl px-3.5 py-2 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-slate-300 mb-1 font-semibold">Client Noted Strengths (Comma-separated)</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Domain knowledge, Team fit"
+                        value={feedbackForm.client_strengths}
+                        onChange={(e) => setFeedbackForm({ ...feedbackForm, client_strengths: e.target.value })}
+                        className="w-full bg-[#05081c] border border-teal-900/80 rounded-xl px-3.5 py-2 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-300 mb-1 font-semibold">Client Noted Weaknesses (Comma-separated)</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Notice period too long"
+                        value={feedbackForm.client_weaknesses}
+                        onChange={(e) => setFeedbackForm({ ...feedbackForm, client_weaknesses: e.target.value })}
+                        className="w-full bg-[#05081c] border border-teal-900/80 rounded-xl px-3.5 py-2 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-300 mb-1 font-semibold">Client Specific Notes</label>
+                    <textarea
+                      rows={2}
+                      value={feedbackForm.client_notes}
+                      onChange={(e) => setFeedbackForm({ ...feedbackForm, client_notes: e.target.value })}
+                      placeholder="Special client notes, rate negotiations, internal client comments..."
+                      className="w-full bg-[#05081c] border border-teal-900/80 rounded-xl px-3.5 py-2 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all"
                     />
                   </div>
                 </div>
-              </div>
+              )}
 
-              {/* SECTION 4: CANDIDATE REQUESTED SCHEDULE, WORK ROLE, COMPENSATION & OUTCOME (AMBER THEME CARD) */}
+              {/* CANDIDATE REQUESTED SCHEDULE, WORK ROLE & COMPENSATION */}
               <div className="bg-[#291e0a]/60 border border-amber-500/30 rounded-2xl p-4 space-y-3 shadow-inner">
                 <div className="flex items-center gap-2 text-amber-400 font-bold text-xs border-b border-amber-500/20 pb-2">
                   <DollarSign size={15} />
-                  <span>Candidate Requested Schedule, Work Role, Compensation & Outcome</span>
+                  <span>Candidate Requested Schedule, Work Role, Compensation & Joining</span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -1755,7 +2076,7 @@ export default function InterviewManagement() {
                 </div>
               </div>
 
-              {/* SECTION 5: DOCUMENTS & UPLOAD & NOTES (ROSE THEME) */}
+              {/* DOCUMENTS & UPLOAD & NOTES */}
               <div className="bg-[#240b19]/60 border border-rose-500/30 rounded-2xl p-4 space-y-3 shadow-inner">
                 <div className="flex items-center justify-between border-b border-rose-500/20 pb-2">
                   <div className="flex items-center gap-2 text-rose-400 font-bold text-xs">
@@ -1821,12 +2142,12 @@ export default function InterviewManagement() {
                   {actionLoading ? (
                     <>
                       <RefreshCw size={16} className="animate-spin" />
-                      <span>Submitting...</span>
+                      <span>Submitting Feedback...</span>
                     </>
                   ) : (
                     <>
                       <Sparkles size={16} />
-                      <span>Submit Feedback & Rating</span>
+                      <span>Save & Submit Feedback</span>
                     </>
                   )}
                 </button>

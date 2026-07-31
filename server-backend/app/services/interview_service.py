@@ -60,6 +60,14 @@ class InterviewService:
             interview_document_files=payload.interview_document_files,
             recommendation=payload.recommendation or "Pending",
             status=InterviewStatus.SCHEDULED,
+            client_rating=payload.client_rating,
+            client_feedback=payload.client_feedback,
+            client_strengths=payload.client_strengths,
+            client_weaknesses=payload.client_weaknesses,
+            client_recommendation=payload.client_recommendation,
+            client_notes=payload.client_notes,
+            client_name=payload.client_name,
+            client_feedback_date=payload.client_feedback_date,
             notes=payload.notes,
             created_by=created_by,
             updated_by=created_by,
@@ -109,6 +117,14 @@ class InterviewService:
                 interview_document_files=payload.interview_document_files,
                 recommendation=payload.recommendation or "Pending",
                 status=InterviewStatus.SCHEDULED,
+                client_rating=payload.client_rating,
+                client_feedback=payload.client_feedback,
+                client_strengths=payload.client_strengths,
+                client_weaknesses=payload.client_weaknesses,
+                client_recommendation=payload.client_recommendation,
+                client_notes=payload.client_notes,
+                client_name=payload.client_name,
+                client_feedback_date=payload.client_feedback_date,
                 notes=payload.notes,
                 created_by=created_by,
                 updated_by=created_by,
@@ -223,7 +239,7 @@ class InterviewService:
         payload: InterviewFeedbackRequest,
         updated_by: Optional[str] = None,
     ) -> InterviewResponse:
-        """Submit rating, feedback, strengths, and weaknesses for an interview."""
+        """Submit rating, feedback, strengths, and weaknesses for an interview (Round Interviewer and/or Client)."""
         existing = await self.interview_repo.get_by_id(interview_id)
         if not existing:
             raise NotFoundError("Interview not found.")
@@ -236,6 +252,14 @@ class InterviewService:
             weaknesses=payload.weaknesses,
             recommendation=payload.recommendation,
             notes=payload.notes,
+            client_rating=payload.client_rating,
+            client_feedback=payload.client_feedback,
+            client_strengths=payload.client_strengths,
+            client_weaknesses=payload.client_weaknesses,
+            client_recommendation=payload.client_recommendation,
+            client_notes=payload.client_notes,
+            client_name=payload.client_name,
+            client_feedback_date=payload.client_feedback_date,
             updated_by=updated_by,
             candidate_requested_date=payload.candidate_requested_date,
             candidate_requested_time=payload.candidate_requested_time,
@@ -246,8 +270,9 @@ class InterviewService:
             interview_document_files=payload.interview_document_files,
         )
 
-        logger.info(f"Submitted feedback for interview ID '{interview_id}' with rating {payload.rating}")
+        logger.info(f"Submitted feedback for interview ID '{interview_id}'")
         return InterviewResponse.model_validate(updated_doc)
+
 
     async def delete_interview(self, interview_id: str) -> bool:
         """Delete interview record from database."""
