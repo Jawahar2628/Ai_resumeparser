@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import {
-  Calendar, Edit2, Trash2, Plus, Star, X, AlertCircle, UserCheck, FileText, RefreshCw,
+  Calendar, Edit2, Trash2, Plus, Star, X, AlertCircle, UserCheck, FileText, RefreshCw, Save,
   Briefcase, Clock, MapPin, ShieldCheck, DollarSign, TrendingUp, Mail, Layers, AlignLeft, Sparkles, Video, Hash, Upload, Building2
 } from "lucide-react";
 import {
@@ -1118,10 +1118,10 @@ export default function InterviewManagement() {
         </div>
       )}
 
-      {/* EDIT INTERVIEW MODAL (COLORFUL & USER-FRIENDLY UI) */}
+      {/* EDIT INTERVIEW MODAL (WIDE 2-COLUMN FULL-FEATURED UI) */}
       {isEditOpen && selectedInterview && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4 font-sans animate-in fade-in duration-200">
-          <div className="bg-gradient-to-b from-[#0e1338] via-[#090d29] to-[#050719] border border-indigo-500/40 rounded-3xl w-full max-w-3xl max-h-[92vh] overflow-y-auto p-6 md:p-8 space-y-6 shadow-[0_0_60px_rgba(79,70,229,0.25)] relative">
+          <div className="bg-gradient-to-b from-[#0e1338] via-[#090d29] to-[#050719] border border-indigo-500/40 rounded-3xl w-full max-w-6xl w-[94vw] max-h-[92vh] overflow-y-auto p-6 md:p-8 space-y-6 shadow-[0_0_60px_rgba(79,70,229,0.25)] relative">
 
             {/* Modal Header */}
             <div className="flex justify-between items-start border-b border-indigo-500/20 pb-4">
@@ -1153,480 +1153,591 @@ export default function InterviewManagement() {
             </div>
 
             <form onSubmit={handleEditSubmit} className="space-y-6 text-xs">
+              
+              {/* 2-COLUMN GRID WRAPPER FOR WIDE SCREEN EXPANSION */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-              {/* SECTION 1: CANDIDATE & JOB SETUP (INDIGO THEME) */}
-              <div className="bg-[#121842]/60 border border-indigo-500/30 rounded-2xl p-4 space-y-3 shadow-inner">
-                <div className="flex items-center justify-between border-b border-indigo-500/20 pb-2">
-                  <div className="flex items-center gap-2 text-indigo-400 font-bold text-xs">
-                    <Briefcase size={15} />
-                    <span>Candidate & Job Role Setup</span>
+                {/* LEFT COLUMN: SETUP, SCHEDULE & INTERVIEWER DETAILS */}
+                <div className="space-y-5">
+                  {/* SECTION 1: CANDIDATE & JOB SETUP (INDIGO THEME) */}
+                  <div className="bg-[#121842]/60 border border-indigo-500/30 rounded-2xl p-4 space-y-3 shadow-inner">
+                    <div className="flex items-center justify-between border-b border-indigo-500/20 pb-2">
+                      <div className="flex items-center gap-2 text-indigo-400 font-bold text-xs">
+                        <Briefcase size={15} />
+                        <span>Candidate & Job Role Setup</span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-slate-300 mb-1 font-semibold">
+                          Candidate Name <span className="text-rose-400">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={editForm.candidate_name}
+                          onChange={(e) => setEditForm({ ...editForm, candidate_name: e.target.value })}
+                          className="w-full bg-[#05081c] border border-indigo-900/80 rounded-xl px-3.5 py-2 text-slate-100 font-bold focus:outline-none focus:border-indigo-500"
+                          required
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-slate-300 mb-1 font-semibold">
+                          Job Title / Role <span className="text-rose-400">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={editForm.job_title}
+                          onChange={(e) => setEditForm({ ...editForm, job_title: e.target.value })}
+                          className="w-full bg-[#05081c] border border-indigo-900/80 rounded-xl px-3.5 py-2 text-slate-100 font-bold focus:outline-none focus:border-indigo-500"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                      <div>
+                        <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
+                          <Building2 size={13} className="text-indigo-400" /> Job Location
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Bangalore / Remote"
+                          value={editForm.job_location}
+                          onChange={(e) => setEditForm({ ...editForm, job_location: e.target.value })}
+                          className="w-full bg-[#05081c] border border-indigo-900/80 rounded-xl px-3.5 py-2 text-slate-100 font-medium focus:outline-none focus:border-indigo-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
+                          <Briefcase size={13} className="text-indigo-400" /> Job Type
+                        </label>
+                        <select
+                          value={editForm.job_type}
+                          onChange={(e) => setEditForm({ ...editForm, job_type: e.target.value })}
+                          className="w-full bg-[#05081c] border border-indigo-900/80 rounded-xl px-3.5 py-2 text-indigo-200 font-semibold focus:outline-none focus:border-indigo-500"
+                        >
+                          <option value="Full Time">💼 Full Time</option>
+                          <option value="Part Time">⏱️ Part Time</option>
+                          <option value="Contract">📄 Contract</option>
+                          <option value="Hybrid">🏢 Hybrid</option>
+                          <option value="Remote">🌐 Remote</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
+                          <Layers size={13} className="text-indigo-400" /> Interview Type
+                        </label>
+                        <select
+                          value={editForm.interview_type}
+                          onChange={(e) => setEditForm({ ...editForm, interview_type: e.target.value as InterviewTypeEnum })}
+                          className="w-full bg-[#05081c] border border-indigo-900/80 rounded-xl px-3.5 py-2 text-indigo-200 font-semibold focus:outline-none focus:border-indigo-500"
+                        >
+                          <option value="TECHNICAL">💻 TECHNICAL</option>
+                          <option value="HR">👥 HR SCREENING</option>
+                          <option value="MANAGERIAL">👔 MANAGERIAL</option>
+                          <option value="CULTURE_FIT">🌟 CULTURE FIT</option>
+                          <option value="FINAL_ROUND">🏆 FINAL ROUND</option>
+                          <option value="INITIAL_SCREENING">📋 INITIAL SCREENING</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
+                          <Hash size={13} className="text-indigo-400" /> Round Number
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={editForm.round_number}
+                          onChange={(e) => setEditForm({ ...editForm, round_number: Number(e.target.value) })}
+                          className="w-full bg-[#05081c] border border-indigo-900/80 rounded-xl px-3.5 py-2 text-slate-100 font-bold focus:outline-none focus:border-indigo-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* SECTION 2: SCHEDULE & MEETING LINK (CYAN THEME) */}
+                  <div className="bg-[#0b1b36]/60 border border-cyan-500/30 rounded-2xl p-4 space-y-3 shadow-inner">
+                    <div className="flex items-center gap-2 text-cyan-400 font-bold text-xs border-b border-cyan-500/20 pb-2">
+                      <Clock size={15} />
+                      <span>Date, Time & Video Meeting</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
+                          <Calendar size={13} className="text-cyan-400" /> Scheduled Date
+                        </label>
+                        <input
+                          type="date"
+                          value={editForm.scheduled_date}
+                          onChange={(e) => setEditForm({ ...editForm, scheduled_date: e.target.value })}
+                          className="w-full bg-[#05081c] border border-cyan-900/80 rounded-xl px-3 py-2 text-slate-100 font-medium focus:outline-none focus:border-cyan-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
+                          <Clock size={13} className="text-cyan-400" /> Scheduled Time
+                        </label>
+                        <input
+                          type="time"
+                          value={editForm.scheduled_time}
+                          onChange={(e) => setEditForm({ ...editForm, scheduled_time: e.target.value })}
+                          className="w-full bg-[#05081c] border border-cyan-900/80 rounded-xl px-3 py-2 text-slate-100 font-medium focus:outline-none focus:border-cyan-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-slate-300 mb-1 font-semibold">Interview Status</label>
+                        <select
+                          value={editForm.status}
+                          onChange={(e) => setEditForm({ ...editForm, status: e.target.value as InterviewStatusEnum })}
+                          className="w-full bg-[#05081c] border border-cyan-900/80 rounded-xl px-3 py-2 text-cyan-300 font-bold focus:outline-none focus:border-cyan-500"
+                        >
+                          <option value="SCHEDULED">🗓️ SCHEDULED</option>
+                          <option value="COMPLETED">✅ COMPLETED</option>
+                          <option value="RESCHEDULED">🔄 RESCHEDULED</option>
+                          <option value="CANCELLED">❌ CANCELLED</option>
+                          <option value="NO_SHOW">⚠️ NO SHOW</option>
+                          <option value="PENDING">⏳ PENDING</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                      <div>
+                        <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
+                          <Video size={13} className="text-cyan-400" /> Meeting Platform
+                        </label>
+                        <select
+                          value={editForm.meeting_platform}
+                          onChange={(e) => setEditForm({ ...editForm, meeting_platform: e.target.value })}
+                          className="w-full bg-[#05081c] border border-cyan-900/80 rounded-xl px-3.5 py-2 text-cyan-200 font-medium focus:outline-none focus:border-cyan-500"
+                        >
+                          <option value="Google Meet">🎥 Google Meet</option>
+                          <option value="Zoom">📹 Zoom</option>
+                          <option value="Microsoft Teams">💻 Microsoft Teams</option>
+                          <option value="In Person">🏢 In Person / Office</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-slate-300 mb-1 font-semibold">Meeting Link / Address</label>
+                        <input
+                          type="text"
+                          placeholder="https://meet.google.com/..."
+                          value={editForm.meeting_link}
+                          onChange={(e) => setEditForm({ ...editForm, meeting_link: e.target.value })}
+                          className="w-full bg-[#05081c] border border-cyan-900/80 rounded-xl px-3.5 py-2 text-slate-100 font-medium focus:outline-none focus:border-cyan-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* SECTION 3: INTERVIEWER & LOCATION (PURPLE & EMERALD THEME) */}
+                  <div className="space-y-4">
+                    {/* Interviewer Box */}
+                    <div className="bg-[#181033]/60 border border-purple-500/30 rounded-2xl p-4 space-y-3 shadow-inner">
+                      <div className="flex items-center gap-2 text-purple-400 font-bold text-xs border-b border-purple-500/20 pb-2">
+                        <UserCheck size={15} />
+                        <span>Interviewer Info & Round Feedback</span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-slate-300 mb-1 font-semibold">Interviewer Name</label>
+                          <input
+                            type="text"
+                            value={editForm.interviewer_name}
+                            onChange={(e) => setEditForm({ ...editForm, interviewer_name: e.target.value })}
+                            className="w-full bg-[#05081c] border border-purple-900/80 rounded-xl px-3.5 py-2 text-slate-100 font-medium focus:outline-none focus:border-purple-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-slate-300 mb-1 font-semibold">Email Address</label>
+                          <input
+                            type="email"
+                            value={editForm.interviewer_email}
+                            onChange={(e) => setEditForm({ ...editForm, interviewer_email: e.target.value })}
+                            className="w-full bg-[#05081c] border border-purple-900/80 rounded-xl px-3.5 py-2 text-slate-100 font-medium focus:outline-none focus:border-purple-500"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-slate-300 mb-1 font-semibold">Interviewer Rating (1-5)</label>
+                          <input
+                            type="number"
+                            step="0.5"
+                            min="1"
+                            max="5"
+                            value={editForm.rating}
+                            onChange={(e) => setEditForm({ ...editForm, rating: Number(e.target.value) })}
+                            className="w-full bg-[#05081c] border border-purple-900/80 rounded-xl px-3.5 py-2 text-slate-100 font-bold focus:outline-none focus:border-purple-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-slate-300 mb-1 font-semibold">Selection Recommendation</label>
+                          <select
+                            value={editForm.recommendation}
+                            onChange={(e) => setEditForm({ ...editForm, recommendation: e.target.value })}
+                            className="w-full bg-[#05081c] border border-purple-900/80 rounded-xl px-3.5 py-2 text-amber-300 font-bold focus:outline-none focus:border-purple-500"
+                          >
+                            <option value="Selected">🟢 Selected</option>
+                            <option value="Rejected">🔴 Rejected</option>
+                            <option value="Pending">🟡 Pending Decision</option>
+                            <option value="Hold">🟣 On Hold</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-slate-300 mb-1 font-semibold">Interviewer Feedback Comments</label>
+                        <textarea
+                          rows={2}
+                          value={editForm.feedback}
+                          onChange={(e) => setEditForm({ ...editForm, feedback: e.target.value })}
+                          placeholder="Provide round assessment, strengths, technical comments..."
+                          className="w-full bg-[#05081c] border border-purple-900/80 rounded-xl px-3.5 py-2 text-slate-100 font-medium focus:outline-none focus:border-purple-500"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-slate-300 mb-1 font-semibold">Interviewer Strengths</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. React, Problem Solving"
+                            value={editForm.strengths}
+                            onChange={(e) => setEditForm({ ...editForm, strengths: e.target.value })}
+                            className="w-full bg-[#05081c] border border-purple-900/80 rounded-xl px-3.5 py-2 text-slate-100 font-medium focus:outline-none focus:border-purple-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-slate-300 mb-1 font-semibold">Interviewer Weaknesses</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. System Design edge cases"
+                            value={editForm.weaknesses}
+                            onChange={(e) => setEditForm({ ...editForm, weaknesses: e.target.value })}
+                            className="w-full bg-[#05081c] border border-purple-900/80 rounded-xl px-3.5 py-2 text-slate-100 font-medium focus:outline-none focus:border-purple-500"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Location & Verification Box */}
+                    <div className="bg-[#0b241b]/60 border border-emerald-500/30 rounded-2xl p-4 space-y-3 shadow-inner">
+                      <div className="flex items-center gap-2 text-emerald-400 font-bold text-xs border-b border-emerald-500/20 pb-2">
+                        <MapPin size={15} />
+                        <span>Location & HR Verification</span>
+                      </div>
+
+                      <div>
+                        <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
+                          <MapPin size={12} className="text-emerald-400" /> Interview Location
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Bangalore Office"
+                          value={editForm.interview_location || editForm.location}
+                          onChange={(e) => setEditForm({ ...editForm, interview_location: e.target.value, location: e.target.value })}
+                          className="w-full bg-[#05081c] border border-emerald-900/80 rounded-xl px-3.5 py-2 text-slate-100 font-medium focus:outline-none focus:border-emerald-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
+                          <ShieldCheck size={12} className="text-emerald-400" /> HR Verification
+                        </label>
+                        <select
+                          value={editForm.hr_call_verification}
+                          onChange={(e) => setEditForm({ ...editForm, hr_call_verification: e.target.value })}
+                          className="w-full bg-[#05081c] border border-emerald-900/80 rounded-xl px-3.5 py-2 text-emerald-300 font-bold focus:outline-none focus:border-emerald-500"
+                        >
+                          <option value="Verified">✅ Verified</option>
+                          <option value="Pending">⏳ Pending</option>
+                          <option value="Needs Followup">📞 Followup</option>
+                          <option value="Not Eligible">❌ Not Eligible</option>
+                        </select>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
-                      Candidate Name <span className="text-rose-400">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={editForm.candidate_name}
-                      onChange={(e) => setEditForm({ ...editForm, candidate_name: e.target.value })}
-                      className="w-full bg-[#05081c] border border-indigo-900/80 rounded-xl px-3.5 py-2.5 text-slate-100 font-bold focus:outline-none focus:border-indigo-500"
-                      required
-                    />
+                {/* RIGHT COLUMN: CANDIDATE REQUESTS, CLIENT FEEDBACK & DOCUMENTS/NOTES */}
+                <div className="space-y-5">
+                  {/* SECTION 4: CANDIDATE REQUESTED SCHEDULE, WORK ROLE, COMPENSATION & OUTCOME */}
+                  <div className="bg-[#291e0a]/60 border border-amber-500/30 rounded-2xl p-4 space-y-3 shadow-inner">
+                    <div className="flex items-center gap-2 text-amber-400 font-bold text-xs border-b border-amber-500/20 pb-2">
+                      <DollarSign size={15} />
+                      <span>Candidate Requests, Compensation & Selection Outcome</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
+                          <Calendar size={12} className="text-amber-400" /> Requested Date
+                        </label>
+                        <input
+                          type="date"
+                          value={editForm.candidate_requested_date}
+                          onChange={(e) => setEditForm({ ...editForm, candidate_requested_date: e.target.value })}
+                          className="w-full bg-[#05081c] border border-amber-900/80 rounded-xl px-3 py-2 text-slate-100 focus:outline-none focus:border-amber-500 font-medium"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
+                          <Clock size={12} className="text-amber-400" /> Requested Time
+                        </label>
+                        <input
+                          type="time"
+                          value={editForm.candidate_requested_time}
+                          onChange={(e) => setEditForm({ ...editForm, candidate_requested_time: e.target.value })}
+                          className="w-full bg-[#05081c] border border-amber-900/80 rounded-xl px-3 py-2 text-slate-100 focus:outline-none focus:border-amber-500 font-medium"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
+                          <Briefcase size={12} className="text-amber-400" /> Requested Role
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Lead Backend"
+                          value={editForm.candidate_requested_role}
+                          onChange={(e) => setEditForm({ ...editForm, candidate_requested_role: e.target.value })}
+                          className="w-full bg-[#05081c] border border-amber-900/80 rounded-xl px-3 py-2 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500 font-medium"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
+                          <DollarSign size={12} className="text-amber-400" /> Salary Requested
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. 15 LPA"
+                          value={editForm.salary_requested}
+                          onChange={(e) => setEditForm({ ...editForm, salary_requested: e.target.value })}
+                          className="w-full bg-[#05081c] border border-amber-900/80 rounded-xl px-3 py-2 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500 font-medium"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
+                          <TrendingUp size={12} className="text-emerald-400" /> Final Fit Salary
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. 14 LPA"
+                          value={editForm.final_fit_salary}
+                          onChange={(e) => setEditForm({ ...editForm, final_fit_salary: e.target.value })}
+                          className="w-full bg-[#05081c] border border-amber-900/80 rounded-xl px-3 py-2 text-emerald-300 placeholder-slate-600 focus:outline-none focus:border-emerald-500 font-bold"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
+                          <Calendar size={12} className="text-amber-400" /> Joining Date
+                        </label>
+                        <input
+                          type="date"
+                          value={editForm.joining_date}
+                          onChange={(e) => setEditForm({ ...editForm, joining_date: e.target.value })}
+                          className="w-full bg-[#05081c] border border-amber-900/80 rounded-xl px-3 py-2 text-slate-100 focus:outline-none focus:border-amber-500 font-medium"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Candidate Selection Decision Status */}
+                    <div className="pt-1">
+                      <label className="block text-amber-300 mb-1 font-bold flex items-center gap-1 text-xs">
+                        🏆 Selection Outcome Status
+                      </label>
+                      <select
+                        value={editForm.recommendation}
+                        onChange={(e) => setEditForm({ ...editForm, recommendation: e.target.value })}
+                        className="w-full bg-[#05081c] border border-amber-500/60 rounded-xl px-3.5 py-2 text-amber-200 focus:outline-none focus:border-amber-400 font-bold text-xs"
+                      >
+                        <option value="Selected">🟢 Selected (Approved for Hiring)</option>
+                        <option value="Rejected">🔴 Rejected (Not Suitable)</option>
+                        <option value="Pending">🟡 Pending Decision</option>
+                        <option value="Hold">🟣 On Hold</option>
+                      </select>
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
-                      Job Title / Role <span className="text-rose-400">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={editForm.job_title}
-                      onChange={(e) => setEditForm({ ...editForm, job_title: e.target.value })}
-                      className="w-full bg-[#05081c] border border-indigo-900/80 rounded-xl px-3.5 py-2.5 text-slate-100 font-bold focus:outline-none focus:border-indigo-500"
-                      required
-                    />
-                  </div>
-                </div>
+                  {/* CLIENT FEEDBACK CARD IN EDIT MODAL */}
+                  <div className="bg-[#0b242a]/60 border border-teal-500/30 rounded-2xl p-4 space-y-3 shadow-inner">
+                    <div className="flex items-center gap-2 text-teal-300 font-bold text-xs border-b border-teal-500/20 pb-2">
+                      <Building2 size={15} />
+                      <span>Client Feedback Option Details</span>
+                    </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-1">
-                  <div>
-                    <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
-                      <Building2 size={13} className="text-indigo-400" /> Job Location
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Bangalore / Remote"
-                      value={editForm.job_location}
-                      onChange={(e) => setEditForm({ ...editForm, job_location: e.target.value })}
-                      className="w-full bg-[#05081c] border border-indigo-900/80 rounded-xl px-3.5 py-2.5 text-slate-100 font-medium focus:outline-none focus:border-indigo-500"
-                    />
-                  </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-slate-300 mb-1 font-semibold">Client Name / Evaluator</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Acme Corp / John Client"
+                          value={editForm.client_name}
+                          onChange={(e) => setEditForm({ ...editForm, client_name: e.target.value })}
+                          className="w-full bg-[#05081c] border border-teal-900/80 rounded-xl px-3.5 py-2 text-slate-100 font-medium focus:outline-none focus:border-teal-500"
+                        />
+                      </div>
 
-                  <div>
-                    <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
-                      <Briefcase size={13} className="text-indigo-400" /> Job Type
-                    </label>
-                    <select
-                      value={editForm.job_type}
-                      onChange={(e) => setEditForm({ ...editForm, job_type: e.target.value })}
-                      className="w-full bg-[#05081c] border border-indigo-900/80 rounded-xl px-3.5 py-2.5 text-indigo-200 font-semibold focus:outline-none focus:border-indigo-500"
-                    >
-                      <option value="Full Time">💼 Full Time</option>
-                      <option value="Part Time">⏱️ Part Time</option>
-                      <option value="Contract">📄 Contract</option>
-                      <option value="Hybrid">🏢 Hybrid</option>
-                      <option value="Remote">🌐 Remote</option>
-                    </select>
-                  </div>
+                      <div>
+                        <label className="block text-slate-300 mb-1 font-semibold">Client Feedback Date</label>
+                        <input
+                          type="date"
+                          value={editForm.client_feedback_date}
+                          onChange={(e) => setEditForm({ ...editForm, client_feedback_date: e.target.value })}
+                          className="w-full bg-[#05081c] border border-teal-900/80 rounded-xl px-3.5 py-2 text-slate-100 font-medium focus:outline-none focus:border-teal-500"
+                        />
+                      </div>
+                    </div>
 
-                  <div>
-                    <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
-                      <Layers size={13} className="text-indigo-400" /> Interview Type
-                    </label>
-                    <select
-                      value={editForm.interview_type}
-                      onChange={(e) => setEditForm({ ...editForm, interview_type: e.target.value as InterviewTypeEnum })}
-                      className="w-full bg-[#05081c] border border-indigo-900/80 rounded-xl px-3.5 py-2.5 text-indigo-200 font-semibold focus:outline-none focus:border-indigo-500"
-                    >
-                      <option value="TECHNICAL">💻 TECHNICAL</option>
-                      <option value="HR">👥 HR SCREENING</option>
-                      <option value="MANAGERIAL">👔 MANAGERIAL</option>
-                      <option value="CULTURE_FIT">🌟 CULTURE FIT</option>
-                      <option value="FINAL_ROUND">🏆 FINAL ROUND</option>
-                      <option value="INITIAL_SCREENING">📋 INITIAL SCREENING</option>
-                    </select>
-                  </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-slate-300 mb-1 font-semibold">Client Rating (1-5)</label>
+                        <input
+                          type="number"
+                          step="0.5"
+                          min="1"
+                          max="5"
+                          value={editForm.client_rating}
+                          onChange={(e) => setEditForm({ ...editForm, client_rating: Number(e.target.value) })}
+                          className="w-full bg-[#05081c] border border-teal-900/80 rounded-xl px-3 py-2 text-slate-100 font-bold focus:outline-none focus:border-teal-500"
+                        />
+                      </div>
 
-                  <div>
-                    <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
-                      <Hash size={13} className="text-indigo-400" /> Round Number
-                    </label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={editForm.round_number}
-                      onChange={(e) => setEditForm({ ...editForm, round_number: Number(e.target.value) })}
-                      className="w-full bg-[#05081c] border border-indigo-900/80 rounded-xl px-3.5 py-2.5 text-slate-100 font-bold focus:outline-none focus:border-indigo-500"
-                    />
-                  </div>
-                </div>
-              </div>
+                      <div>
+                        <label className="block text-slate-300 mb-1 font-semibold">Client Outcome</label>
+                        <select
+                          value={editForm.client_recommendation}
+                          onChange={(e) => setEditForm({ ...editForm, client_recommendation: e.target.value })}
+                          className="w-full bg-[#05081c] border border-teal-900/80 rounded-xl px-3 py-2 text-teal-300 font-bold focus:outline-none focus:border-teal-500 text-[11px]"
+                        >
+                          <option value="Selected">🟢 Selected</option>
+                          <option value="Rejected">🔴 Rejected</option>
+                          <option value="Next Round">🔄 Next Round</option>
+                          <option value="Hold">🟣 On Hold</option>
+                        </select>
+                      </div>
+                    </div>
 
-              {/* SECTION 2: SCHEDULE & MEETING LINK (CYAN THEME) */}
-              <div className="bg-[#0b1b36]/60 border border-cyan-500/30 rounded-2xl p-4 space-y-3 shadow-inner">
-                <div className="flex items-center gap-2 text-cyan-400 font-bold text-xs border-b border-cyan-500/20 pb-2">
-                  <Clock size={15} />
-                  <span>Date, Time & Video Meeting</span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
-                      <Calendar size={13} className="text-cyan-400" /> Scheduled Date
-                    </label>
-                    <input
-                      type="date"
-                      value={editForm.scheduled_date}
-                      onChange={(e) => setEditForm({ ...editForm, scheduled_date: e.target.value })}
-                      className="w-full bg-[#05081c] border border-cyan-900/80 rounded-xl px-3.5 py-2.5 text-slate-100 font-medium focus:outline-none focus:border-cyan-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
-                      <Clock size={13} className="text-cyan-400" /> Scheduled Time
-                    </label>
-                    <input
-                      type="time"
-                      value={editForm.scheduled_time}
-                      onChange={(e) => setEditForm({ ...editForm, scheduled_time: e.target.value })}
-                      className="w-full bg-[#05081c] border border-cyan-900/80 rounded-xl px-3.5 py-2.5 text-slate-100 font-medium focus:outline-none focus:border-cyan-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-slate-300 mb-1 font-semibold">Interview Status</label>
-                    <select
-                      value={editForm.status}
-                      onChange={(e) => setEditForm({ ...editForm, status: e.target.value as InterviewStatusEnum })}
-                      className="w-full bg-[#05081c] border border-cyan-900/80 rounded-xl px-3.5 py-2.5 text-cyan-300 font-bold focus:outline-none focus:border-cyan-500"
-                    >
-                      <option value="SCHEDULED">🗓️ SCHEDULED</option>
-                      <option value="COMPLETED">✅ COMPLETED</option>
-                      <option value="RESCHEDULED">🔄 RESCHEDULED</option>
-                      <option value="CANCELLED">❌ CANCELLED</option>
-                      <option value="NO_SHOW">⚠️ NO SHOW</option>
-                      <option value="PENDING">⏳ PENDING</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                  <div>
-                    <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
-                      <Video size={13} className="text-cyan-400" /> Meeting Platform
-                    </label>
-                    <select
-                      value={editForm.meeting_platform}
-                      onChange={(e) => setEditForm({ ...editForm, meeting_platform: e.target.value })}
-                      className="w-full bg-[#05081c] border border-cyan-900/80 rounded-xl px-3.5 py-2.5 text-cyan-200 font-medium focus:outline-none focus:border-cyan-500"
-                    >
-                      <option value="Google Meet">🎥 Google Meet</option>
-                      <option value="Zoom">📹 Zoom</option>
-                      <option value="Microsoft Teams">💻 Microsoft Teams</option>
-                      <option value="In Person">🏢 In Person / Office</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-slate-300 mb-1 font-semibold">Meeting Link / Address</label>
-                    <input
-                      type="text"
-                      placeholder="https://meet.google.com/..."
-                      value={editForm.meeting_link}
-                      onChange={(e) => setEditForm({ ...editForm, meeting_link: e.target.value })}
-                      className="w-full bg-[#05081c] border border-cyan-900/80 rounded-xl px-3.5 py-2.5 text-slate-100 font-medium focus:outline-none focus:border-cyan-500"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* SECTION 3: INTERVIEWER & LOCATION (PURPLE & EMERALD THEME) */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Interviewer Box */}
-                <div className="bg-[#181033]/60 border border-purple-500/30 rounded-2xl p-4 space-y-3 shadow-inner">
-                  <div className="flex items-center gap-2 text-purple-400 font-bold text-xs border-b border-purple-500/20 pb-2">
-                    <UserCheck size={15} />
-                    <span>Interviewer Details</span>
-                  </div>
-
-                  <div>
-                    <label className="block text-slate-300 mb-1 font-semibold">Interviewer Name</label>
-                    <input
-                      type="text"
-                      value={editForm.interviewer_name}
-                      onChange={(e) => setEditForm({ ...editForm, interviewer_name: e.target.value })}
-                      className="w-full bg-[#05081c] border border-purple-900/80 rounded-xl px-3.5 py-2 text-slate-100 font-medium focus:outline-none focus:border-purple-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
-                      <Mail size={12} className="text-purple-400" /> Email Address
-                    </label>
-                    <input
-                      type="email"
-                      value={editForm.interviewer_email}
-                      onChange={(e) => setEditForm({ ...editForm, interviewer_email: e.target.value })}
-                      className="w-full bg-[#05081c] border border-purple-900/80 rounded-xl px-3.5 py-2 text-slate-100 font-medium focus:outline-none focus:border-purple-500"
-                    />
-                  </div>
-                </div>
-
-                {/* Location & Verification Box */}
-                <div className="bg-[#0b241b]/60 border border-emerald-500/30 rounded-2xl p-4 space-y-3 shadow-inner">
-                  <div className="flex items-center gap-2 text-emerald-400 font-bold text-xs border-b border-emerald-500/20 pb-2">
-                    <MapPin size={15} />
-                    <span>Interview Location & Verification</span>
-                  </div>
-
-                  <div>
-                    <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
-                      <MapPin size={12} className="text-emerald-400" /> Interview Location
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Conference Room A / Bangalore Office"
-                      value={editForm.interview_location || editForm.location}
-                      onChange={(e) => setEditForm({ ...editForm, interview_location: e.target.value, location: e.target.value })}
-                      className="w-full bg-[#05081c] border border-emerald-900/80 rounded-xl px-3.5 py-2 text-slate-100 font-medium focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
-                      <ShieldCheck size={12} className="text-emerald-400" /> HR Call Verification
-                    </label>
-                    <select
-                      value={editForm.hr_call_verification}
-                      onChange={(e) => setEditForm({ ...editForm, hr_call_verification: e.target.value })}
-                      className="w-full bg-[#05081c] border border-emerald-900/80 rounded-xl px-3.5 py-2 text-emerald-300 font-bold focus:outline-none focus:border-emerald-500"
-                    >
-                      <option value="Verified">✅ Verified (Eligible)</option>
-                      <option value="Pending">⏳ Pending Verification</option>
-                      <option value="Needs Followup">📞 Needs Followup Call</option>
-                      <option value="Not Eligible">❌ Not Eligible</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              {/* SECTION 4: CANDIDATE REQUESTED SCHEDULE, WORK ROLE, COMPENSATION & OUTCOME (AMBER THEME CARD) */}
-              <div className="bg-[#291e0a]/60 border border-amber-500/30 rounded-2xl p-4 space-y-3 shadow-inner">
-                <div className="flex items-center gap-2 text-amber-400 font-bold text-xs border-b border-amber-500/20 pb-2">
-                  <DollarSign size={15} />
-                  <span>Candidate Requested Schedule, Work Role, Compensation & Outcome</span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
-                      <Calendar size={12} className="text-amber-400" /> Candidate Requested Date
-                    </label>
-                    <input
-                      type="date"
-                      value={editForm.candidate_requested_date}
-                      onChange={(e) => setEditForm({ ...editForm, candidate_requested_date: e.target.value })}
-                      className="w-full bg-[#05081c] border border-amber-900/80 rounded-xl px-3.5 py-2 text-slate-100 focus:outline-none focus:border-amber-500 font-medium"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
-                      <Clock size={12} className="text-amber-400" /> Candidate Requested Time
-                    </label>
-                    <input
-                      type="time"
-                      value={editForm.candidate_requested_time}
-                      onChange={(e) => setEditForm({ ...editForm, candidate_requested_time: e.target.value })}
-                      className="w-full bg-[#05081c] border border-amber-900/80 rounded-xl px-3.5 py-2 text-slate-100 focus:outline-none focus:border-amber-500 font-medium"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
-                      <Briefcase size={12} className="text-amber-400" /> Requested Role / Work
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Lead Backend Engineer"
-                      value={editForm.candidate_requested_role}
-                      onChange={(e) => setEditForm({ ...editForm, candidate_requested_role: e.target.value })}
-                      className="w-full bg-[#05081c] border border-amber-900/80 rounded-xl px-3.5 py-2 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500 font-medium"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
-                      <DollarSign size={12} className="text-amber-400" /> Salary Requested (Expected)
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 15 LPA / $120,000"
-                      value={editForm.salary_requested}
-                      onChange={(e) => setEditForm({ ...editForm, salary_requested: e.target.value })}
-                      className="w-full bg-[#05081c] border border-amber-900/80 rounded-xl px-3.5 py-2 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500 font-medium"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
-                      <TrendingUp size={12} className="text-emerald-400" /> Final Fit Salary (Agreed)
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 14 LPA / $110,000"
-                      value={editForm.final_fit_salary}
-                      onChange={(e) => setEditForm({ ...editForm, final_fit_salary: e.target.value })}
-                      className="w-full bg-[#05081c] border border-amber-900/80 rounded-xl px-3.5 py-2 text-emerald-300 placeholder-slate-600 focus:outline-none focus:border-emerald-500 font-bold"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
-                      <Calendar size={12} className="text-amber-400" /> Expected Joining Date
-                    </label>
-                    <input
-                      type="date"
-                      value={editForm.joining_date}
-                      onChange={(e) => setEditForm({ ...editForm, joining_date: e.target.value })}
-                      className="w-full bg-[#05081c] border border-amber-900/80 rounded-xl px-3.5 py-2 text-slate-100 focus:outline-none focus:border-amber-500 font-medium"
-                    />
-                  </div>
-                </div>
-
-                {/* Candidate Selection Decision Status */}
-                <div className="pt-1">
-                  <label className="block text-amber-300 mb-1 font-bold flex items-center gap-1 text-xs">
-                    🏆 Selection Outcome Status
-                  </label>
-                  <select
-                    value={editForm.recommendation}
-                    onChange={(e) => setEditForm({ ...editForm, recommendation: e.target.value })}
-                    className="w-full bg-[#05081c] border border-amber-500/60 rounded-xl px-3.5 py-2.5 text-amber-200 focus:outline-none focus:border-amber-400 font-bold text-xs"
-                  >
-                    <option value="Selected">🟢 Selected (Approved for Hiring)</option>
-                    <option value="Rejected">🔴 Rejected (Not Suitable)</option>
-                    <option value="Pending">🟡 Pending Decision</option>
-                    <option value="Hold">🟣 On Hold</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* CLIENT FEEDBACK CARD IN EDIT MODAL */}
-              <div className="bg-[#0b242a]/60 border border-teal-500/30 rounded-2xl p-4 space-y-3 shadow-inner">
-                <div className="flex items-center gap-2 text-teal-300 font-bold text-xs border-b border-teal-500/20 pb-2">
-                  <Building2 size={15} />
-                  <span>Client Feedback Option Details</span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-slate-300 mb-1 font-semibold">Client Name / Evaluator</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Acme Corp / John Client"
-                      value={editForm.client_name}
-                      onChange={(e) => setEditForm({ ...editForm, client_name: e.target.value })}
-                      className="w-full bg-[#05081c] border border-teal-900/80 rounded-xl px-3.5 py-2 text-slate-100 font-medium focus:outline-none focus:border-teal-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-slate-300 mb-1 font-semibold">Client Feedback Date</label>
-                    <input
-                      type="date"
-                      value={editForm.client_feedback_date}
-                      onChange={(e) => setEditForm({ ...editForm, client_feedback_date: e.target.value })}
-                      className="w-full bg-[#05081c] border border-teal-900/80 rounded-xl px-3.5 py-2 text-slate-100 font-medium focus:outline-none focus:border-teal-500"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-slate-300 mb-1 font-semibold">Client Rating (1-5)</label>
-                    <input
-                      type="number"
-                      step="0.5"
-                      min="1"
-                      max="5"
-                      value={editForm.client_rating}
-                      onChange={(e) => setEditForm({ ...editForm, client_rating: Number(e.target.value) })}
-                      className="w-full bg-[#05081c] border border-teal-900/80 rounded-xl px-3.5 py-2 text-slate-100 font-bold focus:outline-none focus:border-teal-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-slate-300 mb-1 font-semibold">Client Outcome</label>
-                    <select
-                      value={editForm.client_recommendation}
-                      onChange={(e) => setEditForm({ ...editForm, client_recommendation: e.target.value })}
-                      className="w-full bg-[#05081c] border border-teal-900/80 rounded-xl px-3.5 py-2 text-teal-300 font-bold focus:outline-none focus:border-teal-500"
-                    >
-                      <option value="Selected">🟢 Client Approved</option>
-                      <option value="Rejected">🔴 Client Rejected</option>
-                      <option value="Next Round">🔄 Next Round</option>
-                      <option value="Hold">🟣 On Hold</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-slate-300 mb-1 font-semibold">Client Detailed Feedback</label>
-                  <textarea
-                    rows={2}
-                    value={editForm.client_feedback}
-                    onChange={(e) => setEditForm({ ...editForm, client_feedback: e.target.value })}
-                    placeholder="Enter client detailed feedback notes..."
-                    className="w-full bg-[#05081c] border border-teal-900/80 rounded-xl px-3.5 py-2 text-slate-100 font-medium focus:outline-none focus:border-teal-500"
-                  />
-                </div>
-              </div>
-
-
-              {/* SECTION 5: DOCUMENTS & UPLOAD & NOTES (ROSE THEME) */}
-              <div className="bg-[#240b19]/60 border border-rose-500/30 rounded-2xl p-4 space-y-3 shadow-inner">
-                <div className="flex items-center justify-between border-b border-rose-500/20 pb-2">
-                  <div className="flex items-center gap-2 text-rose-400 font-bold text-xs">
-                    <FileText size={15} />
-                    <span>Interview Document Files (URLs & Upload)</span>
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="text-slate-300 font-semibold flex items-center gap-1">
-                      <FileText size={12} className="text-rose-400" /> Attached Document Files
-                    </label>
-                    <label className="inline-flex items-center gap-1 bg-rose-950/80 hover:bg-rose-900 border border-rose-700/60 text-rose-200 text-xs px-3 py-1 rounded-xl cursor-pointer font-bold transition-all shadow-sm">
-                      <Upload size={13} />
-                      <span>Browse / Attach Files</span>
-                      <input
-                        type="file"
-                        multiple
-                        onChange={handleEditFileUpload}
-                        className="hidden"
+                    <div>
+                      <label className="block text-slate-300 mb-1 font-semibold">Client Detailed Feedback</label>
+                      <textarea
+                        rows={2}
+                        value={editForm.client_feedback}
+                        onChange={(e) => setEditForm({ ...editForm, client_feedback: e.target.value })}
+                        placeholder="Enter client detailed feedback notes..."
+                        className="w-full bg-[#05081c] border border-teal-900/80 rounded-xl px-3.5 py-2 text-slate-100 font-medium focus:outline-none focus:border-teal-500"
                       />
-                    </label>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-slate-300 mb-1 font-semibold">Client Strengths</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Domain knowledge, Team fit"
+                          value={editForm.client_strengths}
+                          onChange={(e) => setEditForm({ ...editForm, client_strengths: e.target.value })}
+                          className="w-full bg-[#05081c] border border-teal-900/80 rounded-xl px-3.5 py-2 text-slate-100 font-medium focus:outline-none focus:border-teal-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-slate-300 mb-1 font-semibold">Client Weaknesses</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Notice period too long"
+                          value={editForm.client_weaknesses}
+                          onChange={(e) => setEditForm({ ...editForm, client_weaknesses: e.target.value })}
+                          className="w-full bg-[#05081c] border border-teal-900/80 rounded-xl px-3.5 py-2 text-slate-100 font-medium focus:outline-none focus:border-teal-500"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-300 mb-1 font-semibold">Client Specific Notes</label>
+                      <textarea
+                        rows={2}
+                        value={editForm.client_notes}
+                        onChange={(e) => setEditForm({ ...editForm, client_notes: e.target.value })}
+                        placeholder="Special client notes, rate negotiations, internal comments..."
+                        className="w-full bg-[#05081c] border border-teal-900/80 rounded-xl px-3.5 py-2 text-slate-100 font-medium focus:outline-none focus:border-teal-500"
+                      />
+                    </div>
                   </div>
 
-                  <textarea
-                    rows={2}
-                    value={editForm.interview_document_files}
-                    onChange={(e) => setEditForm({ ...editForm, interview_document_files: e.target.value })}
-                    className="w-full bg-[#05081c] border border-rose-900/80 rounded-xl px-3.5 py-2 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-rose-500 font-mono text-[11px]"
-                    placeholder="Document names or URLs (one per line)... Use button above to attach files directly."
-                  />
+                  {/* SECTION 5: DOCUMENTS & UPLOAD & NOTES (ROSE THEME) */}
+                  <div className="bg-[#240b19]/60 border border-rose-500/30 rounded-2xl p-4 space-y-3 shadow-inner">
+                    <div className="flex items-center justify-between border-b border-rose-500/20 pb-2">
+                      <div className="flex items-center gap-2 text-rose-400 font-bold text-xs">
+                        <FileText size={15} />
+                        <span>Interview Documents & Notes</span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-slate-300 font-semibold flex items-center gap-1">
+                          <FileText size={12} className="text-rose-400" /> Attached Document Files
+                        </label>
+                        <label className="inline-flex items-center gap-1 bg-rose-950/80 hover:bg-rose-900 border border-rose-700/60 text-rose-200 text-xs px-3 py-1 rounded-xl cursor-pointer font-bold transition-all shadow-sm">
+                          <Upload size={13} />
+                          <span>Browse / Attach</span>
+                          <input
+                            type="file"
+                            multiple
+                            onChange={handleEditFileUpload}
+                            className="hidden"
+                          />
+                        </label>
+                      </div>
+
+                      <textarea
+                        rows={2}
+                        value={editForm.interview_document_files}
+                        onChange={(e) => setEditForm({ ...editForm, interview_document_files: e.target.value })}
+                        className="w-full bg-[#05081c] border border-rose-900/80 rounded-xl px-3.5 py-2 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-rose-500 font-mono text-[11px]"
+                        placeholder="Document names or URLs (one per line)..."
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
+                        <AlignLeft size={12} className="text-rose-400" /> Notes / Special Instructions
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={editForm.notes}
+                        onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+                        className="w-full bg-[#05081c] border border-rose-900/80 rounded-xl px-3.5 py-2 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-rose-500 font-medium"
+                        placeholder="Key assessment areas, prep notes..."
+                      />
+                    </div>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
-                    <AlignLeft size={12} className="text-rose-400" /> Notes / Special Instructions
-                  </label>
-                  <textarea
-                    rows={2}
-                    value={editForm.notes}
-                    onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
-                    className="w-full bg-[#05081c] border border-rose-900/80 rounded-xl px-3.5 py-2 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-rose-500 font-medium"
-                    placeholder="Key assessment areas, candidate prep notes, internal guidelines..."
-                  />
-                </div>
               </div>
 
               {/* Action Buttons Footer */}
@@ -1641,7 +1752,7 @@ export default function InterviewManagement() {
                 <button
                   type="submit"
                   disabled={actionLoading}
-                  className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white rounded-xl font-bold shadow-lg shadow-indigo-600/30 transition-all cursor-pointer disabled:opacity-50 active:scale-95"
+                  className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-indigo-600 via-purple-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white rounded-xl font-bold shadow-lg shadow-indigo-600/30 transition-all cursor-pointer disabled:opacity-50 active:scale-95"
                 >
                   {actionLoading ? (
                     <>
@@ -1650,8 +1761,8 @@ export default function InterviewManagement() {
                     </>
                   ) : (
                     <>
-                      <Sparkles size={16} />
-                      <span>Save & Update Interview</span>
+                      <Save size={16} />
+                      <span>Save Interview Details</span>
                     </>
                   )}
                 </button>
@@ -1737,11 +1848,11 @@ export default function InterviewManagement() {
         </div>
       )}
 
-      {/* RATING & FEEDBACK MODAL (DUAL OPTION: INTERVIEWER ROUND FEEDBACK & CLIENT FEEDBACK) */}
+      {/* RATING & FEEDBACK MODAL (WIDE 2-COLUMN DUAL OPTION: INTERVIEWER ROUND FEEDBACK & CLIENT FEEDBACK) */}
       {isFeedbackOpen && selectedInterview && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4 font-sans animate-in fade-in duration-200">
-          <div className="bg-gradient-to-b from-[#0e1338] via-[#090d29] to-[#050719] border border-emerald-500/40 rounded-3xl w-full max-w-3xl max-h-[92vh] overflow-y-auto p-6 md:p-8 space-y-6 shadow-[0_0_60px_rgba(16,185,129,0.2)] relative">
-
+          <div className="bg-gradient-to-b from-[#0e1338] via-[#090d29] to-[#050719] border border-emerald-500/40 rounded-3xl w-full max-w-6xl w-[94vw] max-h-[92vh] overflow-y-auto p-6 md:p-8 space-y-6 shadow-[0_0_60px_rgba(16,185,129,0.2)] relative">
+            
             {/* Header */}
             <div className="flex justify-between items-start border-b border-emerald-500/20 pb-4">
               <div className="flex items-center gap-3">
@@ -1797,332 +1908,343 @@ export default function InterviewManagement() {
               </button>
             </div>
 
-            <form onSubmit={handleFeedbackSubmit} className="space-y-5 text-xs">
+            <form onSubmit={handleFeedbackSubmit} className="space-y-6 text-xs">
+              
+              {/* 2-COLUMN GRID WRAPPER FOR WIDE FEEDBACK MODAL */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-              {/* TAB 1: INTERVIEWER / ROUND EVALUATION CARD */}
-              {feedbackTab === "INTERVIEWER" && (
-                <div className="bg-[#0f2420]/60 border border-emerald-500/30 rounded-2xl p-5 space-y-4 shadow-inner">
-                  <div className="flex items-center justify-between border-b border-emerald-500/20 pb-2">
-                    <div className="flex items-center gap-2 text-emerald-400 font-bold text-xs">
-                      <Sparkles size={15} />
-                      <span>{selectedInterview.interview_type.replace("_", " ")} - Round {selectedInterview.round_number} Performance Evaluation</span>
+                {/* LEFT COLUMN: EVALUATION CARD (INTERVIEWER OR CLIENT) */}
+                <div>
+                  {/* TAB 1: INTERVIEWER / ROUND EVALUATION CARD */}
+                  {feedbackTab === "INTERVIEWER" && (
+                    <div className="bg-[#0f2420]/60 border border-emerald-500/30 rounded-2xl p-5 space-y-4 shadow-inner h-full">
+                      <div className="flex items-center justify-between border-b border-emerald-500/20 pb-2">
+                        <div className="flex items-center gap-2 text-emerald-400 font-bold text-xs">
+                          <Sparkles size={15} />
+                          <span>{selectedInterview.interview_type.replace("_", " ")} - Round {selectedInterview.round_number} Performance Evaluation</span>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-slate-300 mb-1 font-semibold">Interviewer Rating (1.0 to 5.0)</label>
+                          <input
+                            type="number"
+                            step="0.5"
+                            min="1"
+                            max="5"
+                            value={feedbackForm.rating}
+                            onChange={(e) => setFeedbackForm({ ...feedbackForm, rating: Number(e.target.value) })}
+                            className="w-full bg-[#05081c] border border-emerald-900/80 rounded-xl px-3.5 py-2.5 text-slate-100 font-bold focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
+                            🏆 Round Outcome Status
+                          </label>
+                          <select
+                            value={feedbackForm.recommendation}
+                            onChange={(e) => setFeedbackForm({ ...feedbackForm, recommendation: e.target.value })}
+                            className="w-full bg-[#05081c] border border-emerald-900/80 rounded-xl px-3.5 py-2.5 text-emerald-300 font-bold focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                          >
+                            <option value="Selected">🟢 Selected (Passed Round)</option>
+                            <option value="Rejected">🔴 Rejected (Not Suitable)</option>
+                            <option value="Pending">🟡 Pending Decision</option>
+                            <option value="Hold">🟣 On Hold</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-slate-300 mb-1 font-semibold">Interviewer Round Feedback</label>
+                        <textarea
+                          rows={4}
+                          value={feedbackForm.feedback}
+                          onChange={(e) => setFeedbackForm({ ...feedbackForm, feedback: e.target.value })}
+                          placeholder="Provide technical round evaluation, coding skills, domain questions, communication..."
+                          className="w-full bg-[#05081c] border border-emerald-900/80 rounded-xl px-3.5 py-2.5 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-slate-300 mb-1 font-semibold">Candidate Strengths (Comma-separated)</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Problem Solving, React"
+                            value={feedbackForm.strengths}
+                            onChange={(e) => setFeedbackForm({ ...feedbackForm, strengths: e.target.value })}
+                            className="w-full bg-[#05081c] border border-emerald-900/80 rounded-xl px-3.5 py-2 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-slate-300 mb-1 font-semibold">Areas for Improvement (Comma-separated)</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. System Design edge cases"
+                            value={feedbackForm.weaknesses}
+                            onChange={(e) => setFeedbackForm({ ...feedbackForm, weaknesses: e.target.value })}
+                            className="w-full bg-[#05081c] border border-emerald-900/80 rounded-xl px-3.5 py-2 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* TAB 2: CLIENT FEEDBACK CARD */}
+                  {feedbackTab === "CLIENT" && (
+                    <div className="bg-[#0b242a]/60 border border-teal-500/30 rounded-2xl p-5 space-y-4 shadow-inner h-full">
+                      <div className="flex items-center justify-between border-b border-teal-500/20 pb-2">
+                        <div className="flex items-center gap-2 text-teal-300 font-bold text-xs">
+                          <Building2 size={15} />
+                          <span>Client Evaluation & Feedback Details</span>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-slate-300 mb-1 font-semibold">Client Company / Evaluator Name</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Acme Corp / John Manager"
+                            value={feedbackForm.client_name}
+                            onChange={(e) => setFeedbackForm({ ...feedbackForm, client_name: e.target.value })}
+                            className="w-full bg-[#05081c] border border-teal-900/80 rounded-xl px-3.5 py-2.5 text-slate-100 font-medium focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
+                            <Calendar size={13} className="text-teal-400" /> Client Feedback Date
+                          </label>
+                          <input
+                            type="date"
+                            value={feedbackForm.client_feedback_date}
+                            onChange={(e) => setFeedbackForm({ ...feedbackForm, client_feedback_date: e.target.value })}
+                            className="w-full bg-[#05081c] border border-teal-900/80 rounded-xl px-3.5 py-2.5 text-slate-100 font-medium focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-slate-300 mb-1 font-semibold">Client Rating Score (1.0 to 5.0)</label>
+                          <input
+                            type="number"
+                            step="0.5"
+                            min="1"
+                            max="5"
+                            value={feedbackForm.client_rating}
+                            onChange={(e) => setFeedbackForm({ ...feedbackForm, client_rating: Number(e.target.value) })}
+                            className="w-full bg-[#05081c] border border-teal-900/80 rounded-xl px-3.5 py-2.5 text-slate-100 font-bold focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-slate-300 mb-1 font-semibold">Client Recommendation Outcome</label>
+                          <select
+                            value={feedbackForm.client_recommendation}
+                            onChange={(e) => setFeedbackForm({ ...feedbackForm, client_recommendation: e.target.value })}
+                            className="w-full bg-[#05081c] border border-teal-900/80 rounded-xl px-3.5 py-2.5 text-teal-300 font-bold focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all"
+                          >
+                            <option value="Selected">🟢 Client Approved / Selected</option>
+                            <option value="Rejected">🔴 Client Rejected</option>
+                            <option value="Next Round">🔄 Recommended Next Round</option>
+                            <option value="Hold">🟣 Client On Hold</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-slate-300 mb-1 font-semibold">Client Detailed Feedback</label>
+                        <textarea
+                          rows={3}
+                          value={feedbackForm.client_feedback}
+                          onChange={(e) => setFeedbackForm({ ...feedbackForm, client_feedback: e.target.value })}
+                          placeholder="Enter client review comments, project fit, client rating details..."
+                          className="w-full bg-[#05081c] border border-teal-900/80 rounded-xl px-3.5 py-2 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-slate-300 mb-1 font-semibold">Client Strengths (Comma-separated)</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Domain knowledge, Team fit"
+                            value={feedbackForm.client_strengths}
+                            onChange={(e) => setFeedbackForm({ ...feedbackForm, client_strengths: e.target.value })}
+                            className="w-full bg-[#05081c] border border-teal-900/80 rounded-xl px-3.5 py-2 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-slate-300 mb-1 font-semibold">Client Weaknesses (Comma-separated)</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Notice period too long"
+                            value={feedbackForm.client_weaknesses}
+                            onChange={(e) => setFeedbackForm({ ...feedbackForm, client_weaknesses: e.target.value })}
+                            className="w-full bg-[#05081c] border border-teal-900/80 rounded-xl px-3.5 py-2 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-slate-300 mb-1 font-semibold">Client Specific Notes</label>
+                        <textarea
+                          rows={2}
+                          value={feedbackForm.client_notes}
+                          onChange={(e) => setFeedbackForm({ ...feedbackForm, client_notes: e.target.value })}
+                          placeholder="Special client notes, rate negotiations, internal client comments..."
+                          className="w-full bg-[#05081c] border border-teal-900/80 rounded-xl px-3.5 py-2 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* RIGHT COLUMN: CANDIDATE SCHEDULE/SALARY & DOCUMENTS/NOTES */}
+                <div className="space-y-5">
+                  {/* CANDIDATE REQUESTED SCHEDULE, WORK ROLE & COMPENSATION */}
+                  <div className="bg-[#291e0a]/60 border border-amber-500/30 rounded-2xl p-4 space-y-3 shadow-inner">
+                    <div className="flex items-center gap-2 text-amber-400 font-bold text-xs border-b border-amber-500/20 pb-2">
+                      <DollarSign size={15} />
+                      <span>Candidate Requested Schedule, Work Role & Compensation</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
+                          <Calendar size={12} className="text-amber-400" /> Requested Date
+                        </label>
+                        <input
+                          type="date"
+                          value={feedbackForm.candidate_requested_date}
+                          onChange={(e) => setFeedbackForm({ ...feedbackForm, candidate_requested_date: e.target.value })}
+                          className="w-full bg-[#05081c] border border-amber-900/80 rounded-xl px-3 py-2 text-slate-100 focus:outline-none focus:border-amber-500 font-medium"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
+                          <Clock size={12} className="text-amber-400" /> Requested Time
+                        </label>
+                        <input
+                          type="time"
+                          value={feedbackForm.candidate_requested_time}
+                          onChange={(e) => setFeedbackForm({ ...feedbackForm, candidate_requested_time: e.target.value })}
+                          className="w-full bg-[#05081c] border border-amber-900/80 rounded-xl px-3 py-2 text-slate-100 focus:outline-none focus:border-amber-500 font-medium"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
+                          <Briefcase size={12} className="text-amber-400" /> Requested Role
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Lead Backend"
+                          value={feedbackForm.candidate_requested_role}
+                          onChange={(e) => setFeedbackForm({ ...feedbackForm, candidate_requested_role: e.target.value })}
+                          className="w-full bg-[#05081c] border border-amber-900/80 rounded-xl px-3 py-2 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500 font-medium"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
+                          <DollarSign size={12} className="text-amber-400" /> Salary Requested
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. 15 LPA"
+                          value={feedbackForm.salary_requested}
+                          onChange={(e) => setFeedbackForm({ ...feedbackForm, salary_requested: e.target.value })}
+                          className="w-full bg-[#05081c] border border-amber-900/80 rounded-xl px-3 py-2 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500 font-medium"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
+                          <TrendingUp size={12} className="text-emerald-400" /> Final Fit Salary
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. 14 LPA"
+                          value={feedbackForm.final_fit_salary}
+                          onChange={(e) => setFeedbackForm({ ...feedbackForm, final_fit_salary: e.target.value })}
+                          className="w-full bg-[#05081c] border border-amber-900/80 rounded-xl px-3 py-2 text-emerald-300 placeholder-slate-600 focus:outline-none focus:border-emerald-500 font-bold"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
+                          <Calendar size={12} className="text-amber-400" /> Joining Date
+                        </label>
+                        <input
+                          type="date"
+                          value={feedbackForm.joining_date}
+                          onChange={(e) => setFeedbackForm({ ...feedbackForm, joining_date: e.target.value })}
+                          className="w-full bg-[#05081c] border border-amber-900/80 rounded-xl px-3 py-2 text-slate-100 focus:outline-none focus:border-amber-500 font-medium"
+                        />
+                      </div>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* DOCUMENTS & UPLOAD & NOTES */}
+                  <div className="bg-[#240b19]/60 border border-rose-500/30 rounded-2xl p-4 space-y-3 shadow-inner">
+                    <div className="flex items-center justify-between border-b border-rose-500/20 pb-2">
+                      <div className="flex items-center gap-2 text-rose-400 font-bold text-xs">
+                        <FileText size={15} />
+                        <span>Interview Documents & Notes</span>
+                      </div>
+                    </div>
+
                     <div>
-                      <label className="block text-slate-300 mb-1 font-semibold">Interviewer Rating (1.0 to 5.0)</label>
-                      <input
-                        type="number"
-                        step="0.5"
-                        min="1"
-                        max="5"
-                        value={feedbackForm.rating}
-                        onChange={(e) => setFeedbackForm({ ...feedbackForm, rating: Number(e.target.value) })}
-                        className="w-full bg-[#05081c] border border-emerald-900/80 rounded-xl px-3.5 py-2.5 text-slate-100 font-bold focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-slate-300 font-semibold flex items-center gap-1">
+                          <FileText size={12} className="text-rose-400" /> Attached Document Files
+                        </label>
+                        <label className="inline-flex items-center gap-1 bg-rose-950/80 hover:bg-rose-900 border border-rose-700/60 text-rose-200 text-xs px-3 py-1 rounded-xl cursor-pointer font-bold transition-all shadow-sm">
+                          <Upload size={13} />
+                          <span>Browse / Attach</span>
+                          <input
+                            type="file"
+                            multiple
+                            onChange={handleFeedbackFileUpload}
+                            className="hidden"
+                          />
+                        </label>
+                      </div>
+
+                      <textarea
+                        rows={2}
+                        value={feedbackForm.interview_document_files}
+                        onChange={(e) => setFeedbackForm({ ...feedbackForm, interview_document_files: e.target.value })}
+                        className="w-full bg-[#05081c] border border-rose-900/80 rounded-xl px-3.5 py-2 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-rose-500 font-mono text-[11px]"
+                        placeholder="Document names or URLs (one per line)..."
                       />
                     </div>
 
                     <div>
                       <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
-                        🏆 Round Outcome Status
+                        <AlignLeft size={12} className="text-rose-400" /> Notes / Special Instructions
                       </label>
-                      <select
-                        value={feedbackForm.recommendation}
-                        onChange={(e) => setFeedbackForm({ ...feedbackForm, recommendation: e.target.value })}
-                        className="w-full bg-[#05081c] border border-emerald-900/80 rounded-xl px-3.5 py-2.5 text-emerald-300 font-bold focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
-                      >
-                        <option value="Selected">🟢 Selected (Passed Round)</option>
-                        <option value="Rejected">🔴 Rejected (Not Suitable)</option>
-                        <option value="Pending">🟡 Pending Decision</option>
-                        <option value="Hold">🟣 On Hold</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-slate-300 mb-1 font-semibold">Interviewer Round Feedback</label>
-                    <textarea
-                      rows={3}
-                      value={feedbackForm.feedback}
-                      onChange={(e) => setFeedbackForm({ ...feedbackForm, feedback: e.target.value })}
-                      placeholder="Provide technical round evaluation, coding skills, domain questions, communication..."
-                      className="w-full bg-[#05081c] border border-emerald-900/80 rounded-xl px-3.5 py-2 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-slate-300 mb-1 font-semibold">Candidate Strengths (Comma-separated)</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. Problem Solving, Architecture, React"
-                        value={feedbackForm.strengths}
-                        onChange={(e) => setFeedbackForm({ ...feedbackForm, strengths: e.target.value })}
-                        className="w-full bg-[#05081c] border border-emerald-900/80 rounded-xl px-3.5 py-2 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-slate-300 mb-1 font-semibold">Areas for Improvement (Comma-separated)</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. System Design edge cases, Microservices"
-                        value={feedbackForm.weaknesses}
-                        onChange={(e) => setFeedbackForm({ ...feedbackForm, weaknesses: e.target.value })}
-                        className="w-full bg-[#05081c] border border-emerald-900/80 rounded-xl px-3.5 py-2 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                      <textarea
+                        rows={2}
+                        value={feedbackForm.notes}
+                        onChange={(e) => setFeedbackForm({ ...feedbackForm, notes: e.target.value })}
+                        className="w-full bg-[#05081c] border border-rose-900/80 rounded-xl px-3.5 py-2 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-rose-500 font-medium"
+                        placeholder="Key assessment areas, candidate prep notes..."
                       />
                     </div>
                   </div>
                 </div>
-              )}
 
-              {/* TAB 2: CLIENT FEEDBACK CARD */}
-              {feedbackTab === "CLIENT" && (
-                <div className="bg-[#0b242a]/60 border border-teal-500/30 rounded-2xl p-5 space-y-4 shadow-inner">
-                  <div className="flex items-center justify-between border-b border-teal-500/20 pb-2">
-                    <div className="flex items-center gap-2 text-teal-300 font-bold text-xs">
-                      <Building2 size={15} />
-                      <span>Client Evaluation & Feedback Details</span>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-slate-300 mb-1 font-semibold">Client Company / Evaluator Name</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. Acme Corp / John Manager"
-                        value={feedbackForm.client_name}
-                        onChange={(e) => setFeedbackForm({ ...feedbackForm, client_name: e.target.value })}
-                        className="w-full bg-[#05081c] border border-teal-900/80 rounded-xl px-3.5 py-2.5 text-slate-100 font-medium focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
-                        <Calendar size={13} className="text-teal-400" /> Client Feedback Date
-                      </label>
-                      <input
-                        type="date"
-                        value={feedbackForm.client_feedback_date}
-                        onChange={(e) => setFeedbackForm({ ...feedbackForm, client_feedback_date: e.target.value })}
-                        className="w-full bg-[#05081c] border border-teal-900/80 rounded-xl px-3.5 py-2.5 text-slate-100 font-medium focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-slate-300 mb-1 font-semibold">Client Rating Score (1.0 to 5.0)</label>
-                      <input
-                        type="number"
-                        step="0.5"
-                        min="1"
-                        max="5"
-                        value={feedbackForm.client_rating}
-                        onChange={(e) => setFeedbackForm({ ...feedbackForm, client_rating: Number(e.target.value) })}
-                        className="w-full bg-[#05081c] border border-teal-900/80 rounded-xl px-3.5 py-2.5 text-slate-100 font-bold focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-slate-300 mb-1 font-semibold">Client Recommendation Outcome</label>
-                      <select
-                        value={feedbackForm.client_recommendation}
-                        onChange={(e) => setFeedbackForm({ ...feedbackForm, client_recommendation: e.target.value })}
-                        className="w-full bg-[#05081c] border border-teal-900/80 rounded-xl px-3.5 py-2.5 text-teal-300 font-bold focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all"
-                      >
-                        <option value="Selected">🟢 Client Approved / Selected</option>
-                        <option value="Rejected">🔴 Client Rejected</option>
-                        <option value="Next Round">🔄 Recommended Next Round</option>
-                        <option value="Hold">🟣 Client On Hold</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-slate-300 mb-1 font-semibold">Client Detailed Feedback</label>
-                    <textarea
-                      rows={3}
-                      value={feedbackForm.client_feedback}
-                      onChange={(e) => setFeedbackForm({ ...feedbackForm, client_feedback: e.target.value })}
-                      placeholder="Enter client review comments, client feedback, project fit, client rating details..."
-                      className="w-full bg-[#05081c] border border-teal-900/80 rounded-xl px-3.5 py-2 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-slate-300 mb-1 font-semibold">Client Noted Strengths (Comma-separated)</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. Domain knowledge, Team fit"
-                        value={feedbackForm.client_strengths}
-                        onChange={(e) => setFeedbackForm({ ...feedbackForm, client_strengths: e.target.value })}
-                        className="w-full bg-[#05081c] border border-teal-900/80 rounded-xl px-3.5 py-2 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-slate-300 mb-1 font-semibold">Client Noted Weaknesses (Comma-separated)</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. Notice period too long"
-                        value={feedbackForm.client_weaknesses}
-                        onChange={(e) => setFeedbackForm({ ...feedbackForm, client_weaknesses: e.target.value })}
-                        className="w-full bg-[#05081c] border border-teal-900/80 rounded-xl px-3.5 py-2 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-slate-300 mb-1 font-semibold">Client Specific Notes</label>
-                    <textarea
-                      rows={2}
-                      value={feedbackForm.client_notes}
-                      onChange={(e) => setFeedbackForm({ ...feedbackForm, client_notes: e.target.value })}
-                      placeholder="Special client notes, rate negotiations, internal client comments..."
-                      className="w-full bg-[#05081c] border border-teal-900/80 rounded-xl px-3.5 py-2 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* CANDIDATE REQUESTED SCHEDULE, WORK ROLE & COMPENSATION */}
-              <div className="bg-[#291e0a]/60 border border-amber-500/30 rounded-2xl p-4 space-y-3 shadow-inner">
-                <div className="flex items-center gap-2 text-amber-400 font-bold text-xs border-b border-amber-500/20 pb-2">
-                  <DollarSign size={15} />
-                  <span>Candidate Requested Schedule, Work Role, Compensation & Joining</span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
-                      <Calendar size={12} className="text-amber-400" /> Candidate Requested Date
-                    </label>
-                    <input
-                      type="date"
-                      value={feedbackForm.candidate_requested_date}
-                      onChange={(e) => setFeedbackForm({ ...feedbackForm, candidate_requested_date: e.target.value })}
-                      className="w-full bg-[#05081c] border border-amber-900/80 rounded-xl px-3.5 py-2 text-slate-100 focus:outline-none focus:border-amber-500 font-medium"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
-                      <Clock size={12} className="text-amber-400" /> Candidate Requested Time
-                    </label>
-                    <input
-                      type="time"
-                      value={feedbackForm.candidate_requested_time}
-                      onChange={(e) => setFeedbackForm({ ...feedbackForm, candidate_requested_time: e.target.value })}
-                      className="w-full bg-[#05081c] border border-amber-900/80 rounded-xl px-3.5 py-2 text-slate-100 focus:outline-none focus:border-amber-500 font-medium"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
-                      <Briefcase size={12} className="text-amber-400" /> Requested Role / Work
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Lead Backend Engineer"
-                      value={feedbackForm.candidate_requested_role}
-                      onChange={(e) => setFeedbackForm({ ...feedbackForm, candidate_requested_role: e.target.value })}
-                      className="w-full bg-[#05081c] border border-amber-900/80 rounded-xl px-3.5 py-2 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500 font-medium"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
-                      <DollarSign size={12} className="text-amber-400" /> Salary Requested (Expected)
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 15 LPA / $120,000"
-                      value={feedbackForm.salary_requested}
-                      onChange={(e) => setFeedbackForm({ ...feedbackForm, salary_requested: e.target.value })}
-                      className="w-full bg-[#05081c] border border-amber-900/80 rounded-xl px-3.5 py-2 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500 font-medium"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
-                      <TrendingUp size={12} className="text-emerald-400" /> Final Fit Salary (Agreed)
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 14 LPA / $110,000"
-                      value={feedbackForm.final_fit_salary}
-                      onChange={(e) => setFeedbackForm({ ...feedbackForm, final_fit_salary: e.target.value })}
-                      className="w-full bg-[#05081c] border border-amber-900/80 rounded-xl px-3.5 py-2 text-emerald-300 placeholder-slate-600 focus:outline-none focus:border-emerald-500 font-bold"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
-                      <Calendar size={12} className="text-amber-400" /> Expected Joining Date
-                    </label>
-                    <input
-                      type="date"
-                      value={feedbackForm.joining_date}
-                      onChange={(e) => setFeedbackForm({ ...feedbackForm, joining_date: e.target.value })}
-                      className="w-full bg-[#05081c] border border-amber-900/80 rounded-xl px-3.5 py-2 text-slate-100 focus:outline-none focus:border-amber-500 font-medium"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* DOCUMENTS & UPLOAD & NOTES */}
-              <div className="bg-[#240b19]/60 border border-rose-500/30 rounded-2xl p-4 space-y-3 shadow-inner">
-                <div className="flex items-center justify-between border-b border-rose-500/20 pb-2">
-                  <div className="flex items-center gap-2 text-rose-400 font-bold text-xs">
-                    <FileText size={15} />
-                    <span>Interview Document Files (URLs & Upload)</span>
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="text-slate-300 font-semibold flex items-center gap-1">
-                      <FileText size={12} className="text-rose-400" /> Attached Document Files
-                    </label>
-                    <label className="inline-flex items-center gap-1 bg-rose-950/80 hover:bg-rose-900 border border-rose-700/60 text-rose-200 text-xs px-3 py-1 rounded-xl cursor-pointer font-bold transition-all shadow-sm">
-                      <Upload size={13} />
-                      <span>Browse / Attach Files</span>
-                      <input
-                        type="file"
-                        multiple
-                        onChange={handleFeedbackFileUpload}
-                        className="hidden"
-                      />
-                    </label>
-                  </div>
-
-                  <textarea
-                    rows={2}
-                    value={feedbackForm.interview_document_files}
-                    onChange={(e) => setFeedbackForm({ ...feedbackForm, interview_document_files: e.target.value })}
-                    className="w-full bg-[#05081c] border border-rose-900/80 rounded-xl px-3.5 py-2 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-rose-500 font-mono text-[11px]"
-                    placeholder="Document names or URLs (one per line)... Use button above to attach files directly."
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
-                    <AlignLeft size={12} className="text-rose-400" /> Notes / Special Instructions
-                  </label>
-                  <textarea
-                    rows={2}
-                    value={feedbackForm.notes}
-                    onChange={(e) => setFeedbackForm({ ...feedbackForm, notes: e.target.value })}
-                    className="w-full bg-[#05081c] border border-rose-900/80 rounded-xl px-3.5 py-2 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-rose-500 font-medium"
-                    placeholder="Key assessment areas, candidate prep notes, internal guidelines..."
-                  />
-                </div>
               </div>
 
               {/* Action Buttons Footer */}
