@@ -1362,7 +1362,9 @@ export default function InterviewManagement() {
                         </div>
 
                         <div>
-                          <label className="block text-slate-300 mb-1 font-semibold">Email Address</label>
+                          <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
+                            <Mail size={12} className="text-purple-400" /> Email Address
+                          </label>
                           <input
                             type="email"
                             value={editForm.interviewer_email}
