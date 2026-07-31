@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import {
-  Calendar, Edit2, Trash2, Plus, Star, X, AlertCircle, UserCheck, FileText, RefreshCw, Save,
+  Calendar, Edit2, Trash2, Plus, Star, X, AlertCircle, UserCheck, FileText, RefreshCw, Save, Eye,
   Briefcase, Clock, MapPin, ShieldCheck, DollarSign, TrendingUp, Mail, Layers, AlignLeft, Sparkles, Video, Hash, Upload, Building2
 } from "lucide-react";
 import {
   getInterviews, createInterview, updateInterview, rescheduleInterview, submitInterviewFeedback, deleteInterview, getResumes,
   type InterviewItem, type InterviewTypeEnum, type InterviewStatusEnum
 } from "../utils/Api";
+import { CandidateDetailsModal } from "../components/CandidateDetailsModal";
 
 export default function InterviewManagement() {
   const [activeTab, setActiveTab] = useState<string>("All");
@@ -21,9 +22,60 @@ export default function InterviewManagement() {
   const [isRescheduleOpen, setIsRescheduleOpen] = useState<boolean>(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState<boolean>(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState<boolean>(false);
+  const [isNextRoundOpen, setIsNextRoundOpen] = useState<boolean>(false);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState<boolean>(false);
+  const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
+  const [selectedCandidateName, setSelectedCandidateName] = useState<string>("");
 
   const [selectedInterview, setSelectedInterview] = useState<InterviewItem | null>(null);
   const [actionLoading, setActionLoading] = useState<boolean>(false);
+
+  const handleOpenDetails = (item: InterviewItem) => {
+    setSelectedInterview(item);
+    setSelectedCandidateId(item.candidate_id || null);
+    setSelectedCandidateName(item.candidate_name || "");
+    setIsDetailsModalOpen(true);
+  };
+
+  // Next Round form state
+  const [nextRoundForm, setNextRoundForm] = useState({
+    candidate_id: "",
+    candidate_name: "",
+    resume_id: "",
+    job_id: "",
+    job_title: "",
+    job_location: "",
+    job_type: "Full Time",
+    interview_type: "TECHNICAL" as InterviewTypeEnum,
+    round_number: 2,
+    scheduled_date: new Date().toISOString().split("T")[0],
+    scheduled_time: "10:00",
+    timezone: "Asia/Kolkata",
+    duration_minutes: 60,
+    interviewer_name: "",
+    interviewer_email: "",
+    meeting_platform: "Google Meet",
+    meeting_link: "",
+    location: "",
+    interview_location: "",
+    hr_call_verification: "Pending",
+    candidate_requested_date: "",
+    candidate_requested_time: "",
+    candidate_requested_role: "",
+    salary_requested: "",
+    final_fit_salary: "",
+    joining_date: "",
+    interview_document_files: "",
+    client_name: "",
+    client_rating: 0,
+    client_feedback: "",
+    client_strengths: "",
+    client_weaknesses: "",
+    client_recommendation: "",
+    client_notes: "",
+    client_feedback_date: "",
+    notes: "",
+  });
 
   // Form states
   const [scheduleForm, setScheduleForm] = useState({
@@ -197,18 +249,43 @@ export default function InterviewManagement() {
     fetchAllData();
   }, []);
 
-  // Filtered interviews according to activeTab
-  const filteredInterviews = interviews.filter((item) => {
+  // Group and extract only the latest/current round for each candidate
+  const getLatestInterviewsPerCandidate = (items: InterviewItem[]) => {
+    const map = new Map<string, InterviewItem>();
+    items.forEach((item) => {
+      const key = item.candidate_id ? item.candidate_id : `${item.candidate_name}_${item.job_title}`;
+      const existing = map.get(key);
+      if (!existing) {
+        map.set(key, item);
+      } else {
+        const existingRound = existing.round_number || 1;
+        const currentRound = item.round_number || 1;
+        if (currentRound > existingRound) {
+          map.set(key, item);
+        } else if (currentRound === existingRound) {
+          if (new Date(item.created_at || 0) > new Date(existing.created_at || 0)) {
+            map.set(key, item);
+          }
+        }
+      }
+    });
+    return Array.from(map.values());
+  };
+
+  // Filtered interviews showing current round only per candidate
+  const latestCandidateInterviews = getLatestInterviewsPerCandidate(interviews);
+
+  const filteredInterviews = latestCandidateInterviews.filter((item) => {
     if (activeTab === "All") return true;
     const tabNorm = activeTab.toUpperCase().replace(/\s+/g, "_");
     return item.interview_type === tabNorm || item.interview_type.includes(tabNorm);
   });
 
-  // Calculate live stats
-  const techCount = interviews.filter((i) => i.interview_type === "TECHNICAL").length;
-  const hrCount = interviews.filter((i) => i.interview_type === "HR").length;
-  const managerialCount = interviews.filter((i) => i.interview_type === "MANAGERIAL").length;
-  const scheduledCount = interviews.filter((i) => i.status === "SCHEDULED" || i.status === "PENDING").length;
+  // Calculate live stats based on current active candidate rounds
+  const techCount = latestCandidateInterviews.filter((i) => i.interview_type === "TECHNICAL").length;
+  const hrCount = latestCandidateInterviews.filter((i) => i.interview_type === "HR").length;
+  const managerialCount = latestCandidateInterviews.filter((i) => i.interview_type === "MANAGERIAL").length;
+  const scheduledCount = latestCandidateInterviews.filter((i) => i.status === "SCHEDULED" || i.status === "PENDING").length;
 
   const stats = [
     { label: "Technical Interviews", value: techCount, status: `${techCount} Active` },
@@ -529,8 +606,118 @@ export default function InterviewManagement() {
     }
   };
 
+  // Schedule Next Round Handlers
+  const handleOpenNextRound = (item: InterviewItem) => {
+    setSelectedInterview(item);
+    const docsJoined = item.interview_document_files && Array.isArray(item.interview_document_files)
+      ? item.interview_document_files.join("\n")
+      : "";
+
+    setNextRoundForm({
+      candidate_id: item.candidate_id || "",
+      candidate_name: item.candidate_name || "",
+      resume_id: item.resume_id || "",
+      job_id: item.job_id || "",
+      job_title: item.job_title || "",
+      job_location: item.job_location || "",
+      job_type: item.job_type || "Full Time",
+      interview_type: "CODING_TEST" as InterviewTypeEnum,
+      round_number: (item.round_number || 1) + 1,
+      scheduled_date: new Date().toISOString().split("T")[0],
+      scheduled_time: "10:00",
+      timezone: item.timezone || "Asia/Kolkata",
+      duration_minutes: item.duration_minutes || 60,
+      interviewer_name: "",
+      interviewer_email: "",
+      meeting_platform: "Google Meet",
+      meeting_link: "",
+      location: item.location || "",
+      interview_location: item.interview_location || "",
+      hr_call_verification: item.hr_call_verification || "Pending",
+      candidate_requested_date: item.candidate_requested_date || "",
+      candidate_requested_time: item.candidate_requested_time || "",
+      candidate_requested_role: item.candidate_requested_role || "",
+      salary_requested: item.salary_requested || "",
+      final_fit_salary: item.final_fit_salary || "",
+      joining_date: item.joining_date || "",
+      interview_document_files: docsJoined,
+      client_name: item.client_name || "",
+      client_rating: item.client_rating || 0,
+      client_feedback: item.client_feedback || "",
+      client_strengths: item.client_strengths ? item.client_strengths.join(", ") : "",
+      client_weaknesses: item.client_weaknesses ? item.client_weaknesses.join(", ") : "",
+      client_recommendation: item.client_recommendation || "",
+      client_notes: item.client_notes || "",
+      client_feedback_date: item.client_feedback_date || "",
+      notes: `Next Round (R${(item.round_number || 1) + 1}) follow-up for ${item.candidate_name}`,
+    });
+    setIsNextRoundOpen(true);
+  };
+
+  const handleNextRoundSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nextRoundForm.candidate_name || !nextRoundForm.job_title || !nextRoundForm.interviewer_name) {
+      alert("Please fill candidate name, job title, and interviewer name for the next round.");
+      return;
+    }
+
+    try {
+      setActionLoading(true);
+      const docFilesArray = nextRoundForm.interview_document_files
+        ? nextRoundForm.interview_document_files.split("\n").map((s) => s.trim()).filter(Boolean)
+        : [];
+
+      await createInterview({
+        candidate_id: nextRoundForm.candidate_id,
+        candidate_name: nextRoundForm.candidate_name,
+        resume_id: nextRoundForm.resume_id || undefined,
+        job_id: nextRoundForm.job_id || undefined,
+        job_title: nextRoundForm.job_title,
+        job_location: nextRoundForm.job_location || undefined,
+        job_type: nextRoundForm.job_type || undefined,
+        interview_type: nextRoundForm.interview_type,
+        round_number: Number(nextRoundForm.round_number),
+        scheduled_date: nextRoundForm.scheduled_date,
+        scheduled_time: nextRoundForm.scheduled_time,
+        timezone: nextRoundForm.timezone,
+        duration_minutes: Number(nextRoundForm.duration_minutes),
+        interviewer_name: nextRoundForm.interviewer_name,
+        interviewer_email: nextRoundForm.interviewer_email || undefined,
+        meeting_platform: nextRoundForm.meeting_platform,
+        meeting_link: nextRoundForm.meeting_link || undefined,
+        location: nextRoundForm.interview_location || nextRoundForm.location || undefined,
+        interview_location: nextRoundForm.interview_location || nextRoundForm.location || undefined,
+        hr_call_verification: nextRoundForm.hr_call_verification || undefined,
+        candidate_requested_date: nextRoundForm.candidate_requested_date || undefined,
+        candidate_requested_time: nextRoundForm.candidate_requested_time || undefined,
+        candidate_requested_role: nextRoundForm.candidate_requested_role || undefined,
+        salary_requested: nextRoundForm.salary_requested || undefined,
+        final_fit_salary: nextRoundForm.final_fit_salary || undefined,
+        joining_date: nextRoundForm.joining_date || undefined,
+        interview_document_files: docFilesArray,
+        client_name: nextRoundForm.client_name || undefined,
+        client_rating: nextRoundForm.client_rating ? Number(nextRoundForm.client_rating) : undefined,
+        client_feedback: nextRoundForm.client_feedback || undefined,
+        client_strengths: nextRoundForm.client_strengths ? nextRoundForm.client_strengths.split(",").map((s) => s.trim()).filter(Boolean) : [],
+        client_weaknesses: nextRoundForm.client_weaknesses ? nextRoundForm.client_weaknesses.split(",").map((s) => s.trim()).filter(Boolean) : [],
+        client_recommendation: nextRoundForm.client_recommendation || undefined,
+        client_notes: nextRoundForm.client_notes || undefined,
+        client_feedback_date: nextRoundForm.client_feedback_date || undefined,
+        notes: nextRoundForm.notes || undefined,
+      });
+
+      setIsNextRoundOpen(false);
+      fetchAllData();
+    } catch (err: any) {
+      console.error("Failed to schedule next round:", err);
+      alert(err.message || "Failed to schedule next round.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   return (
-    <div className="bg-[#030514] text-slate-100 min-h-screen p-6 rounded-2xl space-y-6 font-sans relative">
+    <div className="bg-[#030514] text-slate-100 min-h-screen p-2 rounded-2xl space-y-6 font-sans relative">
       {/* Top Header Bar */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-3">
@@ -709,6 +896,15 @@ export default function InterviewManagement() {
                     </td>
                     <td className="py-3.5 px-3 text-right">
                       <div className="flex items-center justify-end gap-1.5 text-blue-400">
+                        {/* View Candidate Full History Button */}
+                        <button
+                          onClick={() => handleOpenDetails(row)}
+                          title="View Candidate Full Details & All Rounds History"
+                          className="p-1.5 hover:bg-cyan-950/80 hover:text-cyan-300 rounded-md transition-colors border border-cyan-800/60 cursor-pointer text-cyan-400"
+                        >
+                          <Eye size={13} />
+                        </button>
+
                         {/* Edit Button */}
                         <button
                           onClick={() => handleOpenEdit(row)}
@@ -734,6 +930,16 @@ export default function InterviewManagement() {
                           className="p-1.5 hover:bg-slate-800 rounded-md transition-colors border border-slate-800 cursor-pointer text-emerald-400"
                         >
                           <Star size={13} />
+                        </button>
+
+                        {/* Schedule Next Round Button */}
+                        <button
+                          onClick={() => handleOpenNextRound(row)}
+                          title={`Schedule Next Round (Round ${row.round_number + 1})`}
+                          className="p-1.5 hover:bg-purple-950/80 hover:text-purple-300 rounded-md transition-colors border border-purple-800/60 cursor-pointer text-purple-400 flex items-center gap-1 font-bold text-[11px] px-2"
+                        >
+                          <Layers size={13} />
+                          <span>+ Next R{row.round_number + 1}</span>
                         </button>
 
                         {/* Delete Button */}
@@ -1153,7 +1359,7 @@ export default function InterviewManagement() {
             </div>
 
             <form onSubmit={handleEditSubmit} className="space-y-6 text-xs">
-              
+
               {/* 2-COLUMN GRID WRAPPER FOR WIDE SCREEN EXPANSION */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
@@ -1854,7 +2060,7 @@ export default function InterviewManagement() {
       {isFeedbackOpen && selectedInterview && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4 font-sans animate-in fade-in duration-200">
           <div className="bg-gradient-to-b from-[#0e1338] via-[#090d29] to-[#050719] border border-emerald-500/40 rounded-3xl w-full max-w-6xl w-[94vw] max-h-[92vh] overflow-y-auto p-6 md:p-8 space-y-6 shadow-[0_0_60px_rgba(16,185,129,0.2)] relative">
-            
+
             {/* Header */}
             <div className="flex justify-between items-start border-b border-emerald-500/20 pb-4">
               <div className="flex items-center gap-3">
@@ -1911,7 +2117,7 @@ export default function InterviewManagement() {
             </div>
 
             <form onSubmit={handleFeedbackSubmit} className="space-y-6 text-xs">
-              
+
               {/* 2-COLUMN GRID WRAPPER FOR WIDE FEEDBACK MODAL */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
@@ -2323,6 +2529,334 @@ export default function InterviewManagement() {
           </div>
         </div>
       )}
+
+      {/* SCHEDULE NEXT ROUND MODAL */}
+      {isNextRoundOpen && selectedInterview && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4 font-sans animate-in fade-in duration-200">
+          <div className="bg-gradient-to-b from-[#130b2e] via-[#0d0722] to-[#060312] border border-purple-500/40 rounded-3xl w-full max-w-4xl max-h-[92vh] overflow-y-auto p-6 md:p-8 space-y-6 shadow-[0_0_60px_rgba(168,85,247,0.2)] relative">
+            {/* Header */}
+            <div className="flex justify-between items-start border-b border-purple-500/20 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-gradient-to-tr from-purple-600 to-indigo-600 rounded-2xl shadow-lg shadow-purple-500/30 text-white">
+                  <Layers size={22} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg font-bold text-white tracking-wide">
+                      Schedule Next Interview Round
+                    </h2>
+                    <span className="bg-purple-950/90 border border-purple-700/60 text-purple-300 text-[11px] font-bold px-2.5 py-0.5 rounded-full">
+                      Round {nextRoundForm.round_number}
+                    </span>
+                  </div>
+                  <p className="text-xs text-purple-300/80 mt-0.5">
+                    Assign next round type, interviewer details & separate schedule time for {selectedInterview.candidate_name}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsNextRoundOpen(false)}
+                className="text-slate-400 hover:text-white p-2 rounded-xl bg-slate-900/60 hover:bg-slate-800 border border-slate-800 transition-all cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleNextRoundSubmit} className="space-y-5 text-xs">
+              {/* Candidate & Job Readonly Header Card */}
+              <div className="bg-purple-950/30 border border-purple-500/20 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <span className="text-[10px] text-purple-400 font-bold uppercase tracking-wider">Candidate</span>
+                  <div className="text-sm font-bold text-white">{nextRoundForm.candidate_name}</div>
+                </div>
+                <div>
+                  <span className="text-[10px] text-purple-400 font-bold uppercase tracking-wider">Target Job Position</span>
+                  <div className="text-sm font-bold text-purple-200">{nextRoundForm.job_title}</div>
+                </div>
+                <div>
+                  <span className="text-[10px] text-purple-400 font-bold uppercase tracking-wider">Previous Round</span>
+                  <div className="text-sm font-bold text-amber-300">Round {selectedInterview.round_number} ({selectedInterview.interview_type})</div>
+                </div>
+              </div>
+
+              {/* SECTION 1: ROUND SETUP & INTERVIEW TYPE */}
+              <div className="bg-[#190f38]/60 border border-purple-500/30 rounded-2xl p-4 space-y-3 shadow-inner">
+                <div className="flex items-center gap-2 text-purple-300 font-bold text-xs border-b border-purple-500/20 pb-2">
+                  <Sparkles size={15} />
+                  <span>Next Round Setup & Format</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-slate-300 mb-1 font-semibold">Next Round Number</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={nextRoundForm.round_number}
+                      onChange={(e) => setNextRoundForm({ ...nextRoundForm, round_number: Number(e.target.value) })}
+                      className="w-full bg-[#070417] border border-purple-900/80 rounded-xl px-3.5 py-2 text-purple-300 font-bold focus:outline-none focus:border-purple-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-300 mb-1 font-semibold">Next Interview Type / Format</label>
+                    <select
+                      value={nextRoundForm.interview_type}
+                      onChange={(e) => setNextRoundForm({ ...nextRoundForm, interview_type: e.target.value as InterviewTypeEnum })}
+                      className="w-full bg-[#070417] border border-purple-900/80 rounded-xl px-3.5 py-2 text-white font-bold focus:outline-none focus:border-purple-500"
+                    >
+                      <option value="TECHNICAL">💻 TECHNICAL ROUND</option>
+                      <option value="CLIENT_ROUND">🏢 CLIENT ROUND</option>
+                      <option value="SYSTEM_DESIGN">🏗️ SYSTEM DESIGN</option>
+                      <option value="CODING_TEST">⌨️ CODING TEST / LIVE PAIRING</option>
+                      <option value="HR">👥 HR INTERVIEW</option>
+                      <option value="MANAGERIAL">👔 MANAGERIAL ROUND</option>
+                      <option value="CULTURE_FIT">🤝 CULTURE FIT</option>
+                      <option value="BEHAVIORAL">🧠 BEHAVIORAL ASSESSMENT</option>
+                      <option value="FINAL_ROUND">🏆 FINAL EXECUTIVE ROUND</option>
+                      <option value="INITIAL_SCREENING">📞 INITIAL SCREENING</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-300 mb-1 font-semibold">Duration (Minutes)</label>
+                    <input
+                      type="number"
+                      step="15"
+                      min="15"
+                      value={nextRoundForm.duration_minutes}
+                      onChange={(e) => setNextRoundForm({ ...nextRoundForm, duration_minutes: Number(e.target.value) })}
+                      className="w-full bg-[#070417] border border-purple-900/80 rounded-xl px-3.5 py-2 text-slate-100 font-bold focus:outline-none focus:border-purple-500"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* SECTION 2: SEPARATE SCHEDULE DATE & TIME */}
+              <div className="bg-[#0b1c38]/60 border border-cyan-500/30 rounded-2xl p-4 space-y-3 shadow-inner">
+                <div className="flex items-center gap-2 text-cyan-300 font-bold text-xs border-b border-cyan-500/20 pb-2">
+                  <Clock size={15} />
+                  <span>Next Round Separate Schedule Date & Time</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
+                      <Calendar size={12} className="text-cyan-400" /> Scheduled Date
+                    </label>
+                    <input
+                      type="date"
+                      value={nextRoundForm.scheduled_date}
+                      onChange={(e) => setNextRoundForm({ ...nextRoundForm, scheduled_date: e.target.value })}
+                      className="w-full bg-[#05081c] border border-cyan-900/80 rounded-xl px-3.5 py-2 text-white font-medium focus:outline-none focus:border-cyan-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
+                      <Clock size={12} className="text-cyan-400" /> Scheduled Time
+                    </label>
+                    <input
+                      type="time"
+                      value={nextRoundForm.scheduled_time}
+                      onChange={(e) => setNextRoundForm({ ...nextRoundForm, scheduled_time: e.target.value })}
+                      className="w-full bg-[#05081c] border border-cyan-900/80 rounded-xl px-3.5 py-2 text-white font-medium focus:outline-none focus:border-cyan-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-300 mb-1 font-semibold">Timezone</label>
+                    <input
+                      type="text"
+                      value={nextRoundForm.timezone}
+                      onChange={(e) => setNextRoundForm({ ...nextRoundForm, timezone: e.target.value })}
+                      className="w-full bg-[#05081c] border border-cyan-900/80 rounded-xl px-3.5 py-2 text-slate-100 font-medium focus:outline-none focus:border-cyan-500"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* SECTION 3: INTERVIEWER ASSIGNMENT & MEETING LOCATION */}
+              <div className="bg-[#1f112e]/60 border border-indigo-500/30 rounded-2xl p-4 space-y-3 shadow-inner">
+                <div className="flex items-center gap-2 text-indigo-300 font-bold text-xs border-b border-indigo-500/20 pb-2">
+                  <UserCheck size={15} />
+                  <span>Assign Interviewer & Meeting Platform</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-slate-300 mb-1 font-semibold">Interviewer Name</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Sarah Connor / Tech Lead"
+                      value={nextRoundForm.interviewer_name}
+                      onChange={(e) => setNextRoundForm({ ...nextRoundForm, interviewer_name: e.target.value })}
+                      className="w-full bg-[#070417] border border-indigo-900/80 rounded-xl px-3.5 py-2 text-white font-medium focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-300 mb-1 font-semibold flex items-center gap-1">
+                      <Mail size={12} className="text-indigo-400" /> Interviewer Email
+                    </label>
+                    <input
+                      type="email"
+                      placeholder="interviewer@company.com"
+                      value={nextRoundForm.interviewer_email}
+                      onChange={(e) => setNextRoundForm({ ...nextRoundForm, interviewer_email: e.target.value })}
+                      className="w-full bg-[#070417] border border-indigo-900/80 rounded-xl px-3.5 py-2 text-white font-medium focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-slate-300 mb-1 font-semibold">Meeting Platform</label>
+                    <select
+                      value={nextRoundForm.meeting_platform}
+                      onChange={(e) => setNextRoundForm({ ...nextRoundForm, meeting_platform: e.target.value })}
+                      className="w-full bg-[#070417] border border-indigo-900/80 rounded-xl px-3.5 py-2 text-slate-100 font-medium focus:outline-none focus:border-indigo-500"
+                    >
+                      <option value="Google Meet">Google Meet</option>
+                      <option value="Zoom">Zoom</option>
+                      <option value="Microsoft Teams">Microsoft Teams</option>
+                      <option value="In Person">In Person / On-site</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-300 mb-1 font-semibold">Meeting Link / Address</label>
+                    <input
+                      type="text"
+                      placeholder="https://meet.google.com/..."
+                      value={nextRoundForm.meeting_link}
+                      onChange={(e) => setNextRoundForm({ ...nextRoundForm, meeting_link: e.target.value })}
+                      className="w-full bg-[#070417] border border-indigo-900/80 rounded-xl px-3.5 py-2 text-slate-100 font-medium focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-slate-300 mb-1 font-semibold">Notes / Round Assessment Guidelines</label>
+                  <textarea
+                    rows={2}
+                    value={nextRoundForm.notes}
+                    onChange={(e) => setNextRoundForm({ ...nextRoundForm, notes: e.target.value })}
+                    className="w-full bg-[#070417] border border-indigo-900/80 rounded-xl px-3.5 py-2 text-slate-100 font-medium focus:outline-none focus:border-indigo-500"
+                    placeholder="Focus topics, system design questions, client prep notes..."
+                  />
+                </div>
+              </div>
+
+              {/* SECTION 4: INHERITED CANDIDATE DETAILS, HR VERIFICATION & COMPENSATION */}
+              <div className="bg-[#291e0a]/60 border border-amber-500/30 rounded-2xl p-4 space-y-3 shadow-inner">
+                <div className="flex items-center gap-2 text-amber-400 font-bold text-xs border-b border-amber-500/20 pb-2">
+                  <DollarSign size={15} />
+                  <span>Inherited Candidate Requests, HR Verification & Compensation</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-slate-300 mb-1 font-semibold">HR Verification</label>
+                    <select
+                      value={nextRoundForm.hr_call_verification}
+                      onChange={(e) => setNextRoundForm({ ...nextRoundForm, hr_call_verification: e.target.value })}
+                      className="w-full bg-[#070417] border border-amber-900/80 rounded-xl px-3.5 py-2 text-emerald-300 font-bold focus:outline-none focus:border-amber-500"
+                    >
+                      <option value="Verified">✅ Verified</option>
+                      <option value="Pending">⏳ Pending</option>
+                      <option value="Needs Followup">📞 Followup</option>
+                      <option value="Not Eligible">❌ Not Eligible</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-300 mb-1 font-semibold">Salary Requested</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 50000"
+                      value={nextRoundForm.salary_requested}
+                      onChange={(e) => setNextRoundForm({ ...nextRoundForm, salary_requested: e.target.value })}
+                      className="w-full bg-[#070417] border border-amber-900/80 rounded-xl px-3.5 py-2 text-slate-100 font-medium focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-300 mb-1 font-semibold">Final Fit Salary</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 30000"
+                      value={nextRoundForm.final_fit_salary}
+                      onChange={(e) => setNextRoundForm({ ...nextRoundForm, final_fit_salary: e.target.value })}
+                      className="w-full bg-[#070417] border border-amber-900/80 rounded-xl px-3.5 py-2 text-emerald-300 font-bold focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-slate-300 mb-1 font-semibold">Expected Joining Date</label>
+                    <input
+                      type="date"
+                      value={nextRoundForm.joining_date}
+                      onChange={(e) => setNextRoundForm({ ...nextRoundForm, joining_date: e.target.value })}
+                      className="w-full bg-[#070417] border border-amber-900/80 rounded-xl px-3.5 py-2 text-slate-100 font-medium focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-300 mb-1 font-semibold">Attached Document Files</label>
+                    <input
+                      type="text"
+                      placeholder="Document names/URLs..."
+                      value={nextRoundForm.interview_document_files}
+                      onChange={(e) => setNextRoundForm({ ...nextRoundForm, interview_document_files: e.target.value })}
+                      className="w-full bg-[#070417] border border-amber-900/80 rounded-xl px-3.5 py-2 text-slate-100 font-medium focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Footer */}
+              <div className="flex justify-end items-center gap-4 pt-3 border-t border-purple-500/20">
+                <button
+                  type="button"
+                  onClick={() => setIsNextRoundOpen(false)}
+                  className="px-5 py-2.5 bg-slate-900 border border-slate-700 text-slate-300 rounded-xl hover:bg-slate-800 font-bold cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={actionLoading}
+                  className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-purple-600 via-indigo-600 to-teal-600 hover:from-purple-500 hover:to-teal-500 text-white rounded-xl font-bold shadow-lg shadow-purple-600/30 transition-all cursor-pointer disabled:opacity-50 active:scale-95"
+                >
+                  {actionLoading ? (
+                    <>
+                      <RefreshCw size={16} className="animate-spin" />
+                      <span>Scheduling Round {nextRoundForm.round_number}...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Layers size={16} />
+                      <span>Confirm & Schedule Round {nextRoundForm.round_number}</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* CANDIDATE FULL DETAILS MODAL */}
+      <CandidateDetailsModal
+        isOpen={isDetailsModalOpen}
+        onClose={() => setIsDetailsModalOpen(false)}
+        candidateId={selectedCandidateId}
+        candidateName={selectedCandidateName}
+        fallbackInterview={selectedInterview}
+      />
     </div>
   );
 }

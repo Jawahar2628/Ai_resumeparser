@@ -125,3 +125,11 @@ class InterviewController:
             data={},
             message="Interview deleted successfully.",
         )
+
+    async def get_candidate_history(self, candidate_id: str) -> JSONResponse:
+        """Retrieve complete candidate profile and all interview rounds history."""
+        res = await self.interview_service.get_candidate_history(candidate_id)
+        return success_response(
+            data=res.model_dump(),
+            message="Candidate complete interview history retrieved successfully.",
+        )

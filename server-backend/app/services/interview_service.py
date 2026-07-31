@@ -8,6 +8,7 @@ from app.core.exceptions import NotFoundError
 from app.models.interview import InterviewDocument
 from app.repositories.interview_repository import InterviewRepository
 from app.schemas.interview import (
+    CandidateFullHistoryResponse,
     InterviewBatchCreateRequest,
     InterviewCreateRequest,
     InterviewFeedbackRequest,
@@ -283,3 +284,63 @@ class InterviewService:
         deleted = await self.interview_repo.delete(interview_id)
         logger.info(f"Deleted interview document ID '{interview_id}'")
         return deleted
+
+    async def get_candidate_history(self, candidate_id: str) -> CandidateFullHistoryResponse:
+        """Retrieve complete candidate profile and all interview rounds sorted by round number."""
+        raw_interviews = await self.interview_repo.get_by_candidate_id(candidate_id, skip=0, limit=200)
+        if not raw_interviews:
+            raise NotFoundError(f"No interview records found for candidate ID '{candidate_id}'.")
+
+        # Sort rounds by round_number ascending
+        sorted_docs = sorted(raw_interviews, key=lambda x: x.get("round_number", 1))
+        
+        # Aggregate candidate info across all rounds to make sure we don't display empty/null values at top level
+        candidate_name = next((d.get("candidate_name") for d in sorted_docs if d.get("candidate_name")), "Unknown")
+        job_id = next((d.get("job_id") for d in sorted_docs if d.get("job_id")), None)
+        job_title = next((d.get("job_title") for d in sorted_docs if d.get("job_title")), None)
+        job_location = next((d.get("job_location") for d in sorted_docs if d.get("job_location")), None)
+        job_type = next((d.get("job_type") for d in sorted_docs if d.get("job_type")), None)
+        
+        location = next((d.get("location") for d in sorted_docs if d.get("location")), None)
+        interview_location = next((d.get("interview_location") for d in sorted_docs if d.get("interview_location")), None)
+        
+        hr_call_verification = next((d.get("hr_call_verification") for d in sorted_docs if d.get("hr_call_verification") and d.get("hr_call_verification") != "Pending"), "Pending")
+        if hr_call_verification == "Pending":
+            hr_call_verification = next((d.get("hr_call_verification") for d in sorted_docs if d.get("hr_call_verification")), "Pending")
+
+        candidate_requested_date = next((d.get("candidate_requested_date") for d in sorted_docs if d.get("candidate_requested_date")), None)
+        candidate_requested_time = next((d.get("candidate_requested_time") for d in sorted_docs if d.get("candidate_requested_time")), None)
+        candidate_requested_role = next((d.get("candidate_requested_role") for d in sorted_docs if d.get("candidate_requested_role")), None)
+        salary_requested = next((d.get("salary_requested") for d in sorted_docs if d.get("salary_requested")), None)
+        final_fit_salary = next((d.get("final_fit_salary") for d in sorted_docs if d.get("final_fit_salary")), None)
+        joining_date = next((d.get("joining_date") for d in sorted_docs if d.get("joining_date")), None)
+
+        merged_files = []
+        for d in sorted_docs:
+            files = d.get("interview_document_files") or []
+            for f in files:
+                if f not in merged_files:
+                    merged_files.append(f)
+
+        rounds = [InterviewResponse.model_validate(doc) for doc in sorted_docs]
+
+        return CandidateFullHistoryResponse(
+            candidate_id=candidate_id,
+            candidate_name=candidate_name,
+            job_id=job_id,
+            job_title=job_title,
+            job_location=job_location,
+            job_type=job_type,
+            location=location or interview_location,
+            interview_location=interview_location or location,
+            hr_call_verification=hr_call_verification,
+            candidate_requested_date=candidate_requested_date,
+            candidate_requested_time=candidate_requested_time,
+            candidate_requested_role=candidate_requested_role,
+            salary_requested=salary_requested,
+            final_fit_salary=final_fit_salary,
+            joining_date=joining_date,
+            interview_document_files=merged_files,
+            total_rounds=len(rounds),
+            rounds=rounds,
+        )

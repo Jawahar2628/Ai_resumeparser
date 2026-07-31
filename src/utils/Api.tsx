@@ -476,3 +476,23 @@ export const deleteInterview = async (interviewId: string) => {
 
   return resData.data || resData;
 };
+
+export const getCandidateInterviewHistory = async (candidateId: string) => {
+  const token = localStorage.getItem("access_token") || "";
+  const response = await fetch(`${INTERVIEWS_URL}/candidate/${candidateId}/history`, {
+    method: "GET",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  const resData = await response.json();
+  handleAuthError(response, resData);
+
+  if (!response.ok) {
+    throw new Error(resData.detail || "Failed to fetch candidate interview history");
+  }
+
+  return resData.data || resData;
+};

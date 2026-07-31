@@ -59,6 +59,20 @@ async def batch_create_interviews(
 
 
 @router.get(
+    "/candidate/{candidate_id}/history",
+    status_code=status.HTTP_200_OK,
+    summary="Get complete candidate interview history",
+    description="Retrieve all interview rounds and aggregated profile details for a candidate.",
+)
+async def get_candidate_history(
+    candidate_id: str,
+    current_user: dict = Depends(get_current_active_user_optional),
+    controller: InterviewController = Depends(get_interview_controller),
+):
+    return await controller.get_candidate_history(candidate_id)
+
+
+@router.get(
     "",
     status_code=status.HTTP_200_OK,
     summary="List and filter interviews",

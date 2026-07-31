@@ -305,3 +305,28 @@ class InterviewListResponse(BaseModel):
     interviews: List[InterviewResponse]
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class CandidateFullHistoryResponse(BaseModel):
+    """Full aggregated candidate interview history across all rounds response."""
+
+    candidate_id: str
+    candidate_name: str
+    job_id: Optional[str] = None
+    job_title: Optional[str] = None
+    job_location: Optional[str] = None
+    job_type: Optional[str] = None
+    location: Optional[str] = None
+    interview_location: Optional[str] = None
+    hr_call_verification: Optional[str] = None
+    candidate_requested_date: Optional[str] = None
+    candidate_requested_time: Optional[str] = None
+    candidate_requested_role: Optional[str] = None
+    salary_requested: Optional[str] = None
+    final_fit_salary: Optional[str] = None
+    joining_date: Optional[str] = None
+    interview_document_files: List[str] = Field(default_factory=list)
+    total_rounds: int
+    rounds: List[InterviewResponse]
+
+    model_config = ConfigDict(from_attributes=True)
