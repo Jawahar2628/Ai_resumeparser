@@ -1,16 +1,15 @@
-const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+export const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-export const API_BASE = "http://127.0.0.1:8000/api/v1";
-export const RESUME_UPLOAD = `${API_BASE}/resumes/upload`;
-export const RESUME_LIST = `${API_BASE}/resumes`;
-export const RESUME_MATCH = `${API_BASE}/resumes/match`;
-export const RESUME_SUMMARY = `${API_BASE}/resumes/parsed-summary`;
-export const RESUME_MERGE = (id: string) => `${API_BASE}/resumes/${id}/merge`;
-export const RESUME_DOCUMENTS = (id: string) => `${API_BASE}/resumes/${id}/documents`;
+export const RESUME_UPLOAD = `${BASE_URL}/resumes/upload`;
+export const RESUME_LIST = `${BASE_URL}/resumes`;
+export const RESUME_MATCH = `${BASE_URL}/resumes/match`;
+export const RESUME_SUMMARY = `${BASE_URL}/resumes/parsed-summary`;
+export const RESUME_MERGE = (id: string) => `${BASE_URL}/resumes/${id}/merge`;
+export const RESUME_DOCUMENTS = (id: string) => `${BASE_URL}/resumes/${id}/documents`;
 export const INTERVIEWS_URL = `${BASE_URL}/interviews`;
 
-export const AUTH_LOGIN = `${API_BASE}/auth/login`;
-export const AUTH_REGISTER = `${API_BASE}/auth/register`;
+export const AUTH_LOGIN = `${BASE_URL}/auth/login`;
+export const AUTH_REGISTER = `${BASE_URL}/auth/register`;
 export const AUTH_REFRESH = `${BASE_URL}/auth/refresh`;
 
 export const USER_ME = `${BASE_URL}/users/me`;
@@ -264,196 +263,30 @@ export const updateResume = async (resumeId: string, updateData: any) => {
 };
 
 // INTERVIEW INTERFACES & API FUNCTIONS
-export type InterviewTypeEnum =
-  | "TECHNICAL"
-  | "HR"
-  | "MANAGERIAL"
-  | "CULTURE_FIT"
-  | "FINAL_ROUND"
-  | "INITIAL_SCREENING";
+import type {
+  InterviewTypeEnum,
+  InterviewStatusEnum,
+  InterviewItem,
+  CreateInterviewPayload,
+  CandidateInterviewItem,
+  BatchCreateInterviewPayload,
+  UpdateInterviewPayload,
+  RescheduleInterviewPayload,
+  SubmitFeedbackPayload,
+} from "../types/interview";
 
-export type InterviewStatusEnum =
-  | "PENDING"
-  | "SCHEDULED"
-  | "COMPLETED"
-  | "CANCELLED"
-  | "RESCHEDULED"
-  | "NO_SHOW";
+export type {
+  InterviewTypeEnum,
+  InterviewStatusEnum,
+  InterviewItem,
+  CreateInterviewPayload,
+  CandidateInterviewItem,
+  BatchCreateInterviewPayload,
+  UpdateInterviewPayload,
+  RescheduleInterviewPayload,
+  SubmitFeedbackPayload,
+};
 
-export interface InterviewItem {
-  id: string;
-  candidate_id: string;
-  candidate_name: string;
-  resume_id?: string;
-  job_id?: string;
-  job_title: string;
-  job_location?: string;
-  job_type?: string;
-  interview_type: InterviewTypeEnum;
-  round_number: number;
-  scheduled_date: string;
-  scheduled_time: string;
-  timezone: string;
-  duration_minutes: number;
-  interviewer_id?: string;
-  interviewer_name: string;
-  interviewer_email?: string;
-  meeting_link?: string;
-  meeting_platform?: string;
-  location?: string;
-  interview_location?: string;
-  hr_call_verification?: string;
-  candidate_requested_date_time?: string;
-  candidate_requested_date?: string;
-  candidate_requested_time?: string;
-  candidate_requested_role?: string;
-  salary_requested?: string;
-  final_fit_salary?: string;
-  joining_date?: string;
-  interview_document_files?: string[];
-  status: InterviewStatusEnum;
-  rating?: number;
-  feedback?: string;
-  strengths?: string[];
-  weaknesses?: string[];
-  recommendation?: string; // Selected / Rejected / Pending / Hold
-  notes?: string;
-  reschedule_history?: any[];
-  created_by?: string;
-  updated_by?: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface CreateInterviewPayload {
-  candidate_id: string;
-  candidate_name: string;
-  resume_id?: string;
-  job_id?: string;
-  job_title: string;
-  job_location?: string;
-  job_type?: string;
-  interview_type?: InterviewTypeEnum;
-  round_number?: number;
-  scheduled_date: string;
-  scheduled_time: string;
-  timezone?: string;
-  duration_minutes?: number;
-  interviewer_id?: string;
-  interviewer_name: string;
-  interviewer_email?: string;
-  meeting_link?: string;
-  meeting_platform?: string;
-  location?: string;
-  interview_location?: string;
-  hr_call_verification?: string;
-  candidate_requested_date_time?: string;
-  candidate_requested_date?: string;
-  candidate_requested_time?: string;
-  candidate_requested_role?: string;
-  salary_requested?: string;
-  final_fit_salary?: string;
-  joining_date?: string;
-  interview_document_files?: string[];
-  recommendation?: string;
-  notes?: string;
-}
-
-export interface CandidateInterviewItem {
-  candidate_id: string;
-  candidate_name: string;
-  resume_id?: string;
-  location?: string;
-  interview_location?: string;
-}
-
-export interface BatchCreateInterviewPayload {
-  candidates: CandidateInterviewItem[];
-  job_id?: string;
-  job_title: string;
-  job_location?: string;
-  job_type?: string;
-  interview_type?: InterviewTypeEnum;
-  round_number?: number;
-  scheduled_date: string;
-  scheduled_time: string;
-  timezone?: string;
-  duration_minutes?: number;
-  interviewer_id?: string;
-  interviewer_name: string;
-  interviewer_email?: string;
-  meeting_link?: string;
-  meeting_platform?: string;
-  location?: string;
-  interview_location?: string;
-  hr_call_verification?: string;
-  candidate_requested_date_time?: string;
-  candidate_requested_date?: string;
-  candidate_requested_time?: string;
-  candidate_requested_role?: string;
-  salary_requested?: string;
-  final_fit_salary?: string;
-  joining_date?: string;
-  interview_document_files?: string[];
-  recommendation?: string;
-  notes?: string;
-}
-
-export interface UpdateInterviewPayload {
-  candidate_name?: string;
-  job_title?: string;
-  job_location?: string;
-  job_type?: string;
-  interview_type?: InterviewTypeEnum;
-  round_number?: number;
-  scheduled_date?: string;
-  scheduled_time?: string;
-  timezone?: string;
-  duration_minutes?: number;
-  interviewer_id?: string;
-  interviewer_name?: string;
-  interviewer_email?: string;
-  meeting_link?: string;
-  meeting_platform?: string;
-  location?: string;
-  interview_location?: string;
-  hr_call_verification?: string;
-  candidate_requested_date_time?: string;
-  candidate_requested_date?: string;
-  candidate_requested_time?: string;
-  candidate_requested_role?: string;
-  salary_requested?: string;
-  final_fit_salary?: string;
-  joining_date?: string;
-  interview_document_files?: string[];
-  recommendation?: string;
-  status?: InterviewStatusEnum;
-  notes?: string;
-}
-
-export interface RescheduleInterviewPayload {
-  scheduled_date: string;
-  scheduled_time: string;
-  timezone?: string;
-  duration_minutes?: number;
-  reason?: string;
-}
-
-export interface SubmitFeedbackPayload {
-  rating: number;
-  feedback: string;
-  strengths?: string[];
-  weaknesses?: string[];
-  recommendation?: string;
-  notes?: string;
-  candidate_requested_date?: string;
-  candidate_requested_time?: string;
-  candidate_requested_role?: string;
-  salary_requested?: string;
-  final_fit_salary?: string;
-  joining_date?: string;
-  interview_document_files?: string[];
-}
 
 export const getInterviews = async (params: {
   candidate_id?: string;
@@ -639,6 +472,26 @@ export const deleteInterview = async (interviewId: string) => {
 
   if (!response.ok) {
     throw new Error(resData.detail || "Failed to delete interview");
+  }
+
+  return resData.data || resData;
+};
+
+export const getCandidateInterviewHistory = async (candidateId: string) => {
+  const token = localStorage.getItem("access_token") || "";
+  const response = await fetch(`${INTERVIEWS_URL}/candidate/${candidateId}/history`, {
+    method: "GET",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  const resData = await response.json();
+  handleAuthError(response, resData);
+
+  if (!response.ok) {
+    throw new Error(resData.detail || "Failed to fetch candidate interview history");
   }
 
   return resData.data || resData;

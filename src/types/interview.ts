@@ -1,0 +1,240 @@
+export type InterviewTypeEnum =
+  | "TECHNICAL"
+  | "HR"
+  | "MANAGERIAL"
+  | "CULTURE_FIT"
+  | "FINAL_ROUND"
+  | "INITIAL_SCREENING"
+  | "CODING_TEST"
+  | "CLIENT_ROUND"
+  | "SYSTEM_DESIGN"
+  | "BEHAVIORAL";
+
+export type InterviewStatusEnum =
+  | "PENDING"
+  | "SCHEDULED"
+  | "COMPLETED"
+  | "CANCELLED"
+  | "RESCHEDULED"
+  | "NO_SHOW";
+
+export interface InterviewItem {
+  id: string;
+  candidate_id: string;
+  candidate_name: string;
+  resume_id?: string;
+  job_id?: string;
+  job_title: string;
+  job_location?: string;
+  job_type?: string;
+  interview_type: InterviewTypeEnum;
+  round_number: number;
+  scheduled_date: string;
+  scheduled_time: string;
+  timezone: string;
+  duration_minutes: number;
+  interviewer_id?: string;
+  interviewer_name: string;
+  interviewer_email?: string;
+  meeting_link?: string;
+  meeting_platform?: string;
+  location?: string;
+  interview_location?: string;
+  hr_call_verification?: string;
+  candidate_requested_date_time?: string;
+  candidate_requested_date?: string;
+  candidate_requested_time?: string;
+  candidate_requested_role?: string;
+  salary_requested?: string;
+  final_fit_salary?: string;
+  joining_date?: string;
+  interview_document_files?: string[];
+  status: InterviewStatusEnum;
+  // Interviewer / Round Feedback
+  rating?: number;
+  feedback?: string;
+  strengths?: string[];
+  weaknesses?: string[];
+  recommendation?: string; // Selected / Rejected / Pending / Hold
+  // Client Feedback
+  client_rating?: number;
+  client_feedback?: string;
+  client_strengths?: string[];
+  client_weaknesses?: string[];
+  client_recommendation?: string;
+  client_notes?: string;
+  client_name?: string;
+  client_feedback_date?: string;
+  notes?: string;
+  reschedule_history?: any[];
+  created_by?: string;
+  updated_by?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateInterviewPayload {
+  candidate_id: string;
+  candidate_name: string;
+  resume_id?: string;
+  job_id?: string;
+  job_title: string;
+  job_location?: string;
+  job_type?: string;
+  interview_type?: InterviewTypeEnum;
+  round_number?: number;
+  scheduled_date: string;
+  scheduled_time: string;
+  timezone?: string;
+  duration_minutes?: number;
+  interviewer_id?: string;
+  interviewer_name: string;
+  interviewer_email?: string;
+  meeting_link?: string;
+  meeting_platform?: string;
+  location?: string;
+  interview_location?: string;
+  hr_call_verification?: string;
+  candidate_requested_date_time?: string;
+  candidate_requested_date?: string;
+  candidate_requested_time?: string;
+  candidate_requested_role?: string;
+  salary_requested?: string;
+  final_fit_salary?: string;
+  joining_date?: string;
+  interview_document_files?: string[];
+  recommendation?: string;
+  client_rating?: number;
+  client_feedback?: string;
+  client_strengths?: string[];
+  client_weaknesses?: string[];
+  client_recommendation?: string;
+  client_notes?: string;
+  client_name?: string;
+  client_feedback_date?: string;
+  notes?: string;
+}
+
+export interface CandidateInterviewItem {
+  candidate_id: string;
+  candidate_name: string;
+  resume_id?: string;
+  location?: string;
+  interview_location?: string;
+}
+
+export interface BatchCreateInterviewPayload {
+  candidates: CandidateInterviewItem[];
+  job_id?: string;
+  job_title: string;
+  job_location?: string;
+  job_type?: string;
+  interview_type?: InterviewTypeEnum;
+  round_number?: number;
+  scheduled_date: string;
+  scheduled_time: string;
+  timezone?: string;
+  duration_minutes?: number;
+  interviewer_id?: string;
+  interviewer_name: string;
+  interviewer_email?: string;
+  meeting_link?: string;
+  meeting_platform?: string;
+  location?: string;
+  interview_location?: string;
+  hr_call_verification?: string;
+  candidate_requested_date_time?: string;
+  candidate_requested_date?: string;
+  candidate_requested_time?: string;
+  candidate_requested_role?: string;
+  salary_requested?: string;
+  final_fit_salary?: string;
+  joining_date?: string;
+  interview_document_files?: string[];
+  recommendation?: string;
+  client_rating?: number;
+  client_feedback?: string;
+  client_strengths?: string[];
+  client_weaknesses?: string[];
+  client_recommendation?: string;
+  client_notes?: string;
+  client_name?: string;
+  client_feedback_date?: string;
+  notes?: string;
+}
+
+export interface UpdateInterviewPayload {
+  candidate_name?: string;
+  job_title?: string;
+  job_location?: string;
+  job_type?: string;
+  interview_type?: InterviewTypeEnum;
+  round_number?: number;
+  scheduled_date?: string;
+  scheduled_time?: string;
+  timezone?: string;
+  duration_minutes?: number;
+  interviewer_id?: string;
+  interviewer_name?: string;
+  interviewer_email?: string;
+  meeting_link?: string;
+  meeting_platform?: string;
+  location?: string;
+  interview_location?: string;
+  hr_call_verification?: string;
+  candidate_requested_date_time?: string;
+  candidate_requested_date?: string;
+  candidate_requested_time?: string;
+  candidate_requested_role?: string;
+  salary_requested?: string;
+  final_fit_salary?: string;
+  joining_date?: string;
+  interview_document_files?: string[];
+  recommendation?: string;
+  rating?: number;
+  feedback?: string;
+  strengths?: string[];
+  weaknesses?: string[];
+  client_rating?: number;
+  client_feedback?: string;
+  client_strengths?: string[];
+  client_weaknesses?: string[];
+  client_recommendation?: string;
+  client_notes?: string;
+  client_name?: string;
+  client_feedback_date?: string;
+  status?: InterviewStatusEnum;
+  notes?: string;
+}
+
+export interface RescheduleInterviewPayload {
+  scheduled_date: string;
+  scheduled_time: string;
+  timezone?: string;
+  duration_minutes?: number;
+  reason?: string;
+}
+
+export interface SubmitFeedbackPayload {
+  rating?: number;
+  feedback?: string;
+  strengths?: string[];
+  weaknesses?: string[];
+  recommendation?: string;
+  notes?: string;
+  client_rating?: number;
+  client_feedback?: string;
+  client_strengths?: string[];
+  client_weaknesses?: string[];
+  client_recommendation?: string;
+  client_notes?: string;
+  client_name?: string;
+  client_feedback_date?: string;
+  candidate_requested_date?: string;
+  candidate_requested_time?: string;
+  candidate_requested_role?: string;
+  salary_requested?: string;
+  final_fit_salary?: string;
+  joining_date?: string;
+  interview_document_files?: string[];
+}

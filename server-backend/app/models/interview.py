@@ -64,11 +64,21 @@ class InterviewDocument(BaseModel):
     # Status
     status: InterviewStatus = InterviewStatus.PENDING
 
-    # Feedback
+    # Feedback (Interviewer / Round Feedback)
     rating: Optional[float] = None
     feedback: Optional[str] = None
     strengths: List[str] = Field(default_factory=list)
     weaknesses: List[str] = Field(default_factory=list)
+
+    # Client Feedback
+    client_rating: Optional[float] = None
+    client_feedback: Optional[str] = None
+    client_strengths: List[str] = Field(default_factory=list)
+    client_weaknesses: List[str] = Field(default_factory=list)
+    client_recommendation: Optional[str] = None  # Selected / Rejected / Next Round / Hold
+    client_notes: Optional[str] = None
+    client_name: Optional[str] = None
+    client_feedback_date: Optional[str] = None
 
     # Recommendation
     recommendation: Optional[str] = None  # Selected / Rejected / Next Round / Hold
