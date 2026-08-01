@@ -16,6 +16,7 @@ export const AUTH_REFRESH = `${BASE_URL}/auth/refresh`;
 export const USER_ME = `${BASE_URL}/users/me`;
 export const SETTINGS_EMAIL = `${BASE_URL}/settings/email`;
 export const SETTINGS_EMAIL_TEST = `${BASE_URL}/settings/email/test`;
+export const MAIL_TEMPLATES_URL = `${BASE_URL}/templates`;
 export interface LoginPayload {
   email: string;
   password: string;
