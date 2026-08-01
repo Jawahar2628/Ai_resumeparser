@@ -12,8 +12,17 @@ from loguru import logger
 from app.core.config import settings
 from app.core.exceptions import FileUploadError, NotFoundError
 from app.models.resume import ResumeDocument
+from app.models.resume_log import ResumeLogDocument
 from app.repositories.resume_repository import ResumeRepository
-from app.schemas.resume import ResumeExtractResponse, ResumeListResponse, ResumeResponse, ResumeUpdateRequest
+from app.repositories.resume_log_repository import ResumeLogRepository
+from app.schemas.resume import (
+    ResumeExtractResponse,
+    ResumeListResponse,
+    ResumeResponse,
+    ResumeUpdateRequest,
+    ResumeLogResponse,
+    ResumeLogListResponse,
+)
 from app.services.s3_service import S3Service
 from app.utils.enums import ResumeStatus
 from app.utils.helpers import generate_uuid, sanitize_filename, utc_now
@@ -23,8 +32,14 @@ from app.utils.validators import validate_uploaded_file
 class ResumeService:
     """Service handling resume processing, text extraction, S3 upload, and parsing."""
 
-    def __init__(self, resume_repo: ResumeRepository, s3_service: Optional[S3Service] = None):
+    def __init__(
+        self,
+        resume_repo: ResumeRepository,
+        s3_service: Optional[S3Service] = None,
+        resume_log_repo: Optional[ResumeLogRepository] = None,
+    ):
         self.resume_repo = resume_repo
+        self.resume_log_repo = resume_log_repo or ResumeLogRepository(resume_repo.db)
         self.s3_service = s3_service or S3Service()
         self.upload_dir = Path(__file__).resolve().parent.parent / settings.UPLOAD_FOLDER
         self.upload_dir.mkdir(parents=True, exist_ok=True)
@@ -43,17 +58,9 @@ class ResumeService:
         import hashlib
         file_hash = hashlib.sha256(content).hexdigest()
 
-        # Check duplicate original filename for user: if existing, return existing or update with unique suffix
-        existing_resume = await self.resume_repo.find_by_user_and_filename(user_id, original_filename)
-        
         ext = original_filename.rsplit(".", 1)[-1].lower()
-        if existing_resume:
-            logger.info(f"Existing upload found for '{original_filename}'. Overwriting/updating record.")
-            resume_id = existing_resume["id"]
-            unique_filename = existing_resume.get("filename") or f"{resume_id}_{original_filename}"
-        else:
-            resume_id = generate_uuid()
-            unique_filename = f"{resume_id}_{original_filename}"
+        resume_id = generate_uuid()
+        unique_filename = f"{resume_id}_{original_filename}"
         file_path = str(self.upload_dir / unique_filename)
 
         # Write file to disk
@@ -98,12 +105,8 @@ class ResumeService:
             status=ResumeStatus.PENDING,
         )
 
-        if existing_resume:
-            created = await self.resume_repo.update(resume_id, resume_doc.to_dict())
-            logger.info(f"Updated existing resume document in MongoDB: ID '{resume_id}'")
-        else:
-            created = await self.resume_repo.create(resume_doc.to_dict())
-            logger.info(f"Recorded resume document in MongoDB: ID '{resume_id}' for user '{user_id}' with S3 URL '{s3_url}'")
+        created = await self.resume_repo.create(resume_doc.to_dict())
+        logger.info(f"Recorded temporary upload document in MongoDB: ID '{resume_id}' for user '{user_id}' with S3 URL '{s3_url}'")
         
         if status != ResumeStatus.FAILED:
             # Enqueue the background task for AI parsing
@@ -132,62 +135,133 @@ class ResumeService:
                     response.raise_for_status()
                     ai_result = response.json()
                     
-            job_id = ai_result.get("job_id")
-            if not job_id:
-                # Fallback if old stateless ai-parser is still responding
-                if ai_result.get("status") == "completed":
-                    parsed_data = ai_result.get("parsed_resume", {})
-                    ai_evaluation = ai_result.get("evaluation", {})
-                    await self.resume_repo.update(resume_id, {
-                        "parsed_data": parsed_data,
-                        "ai_evaluation": ai_evaluation,
-                        "status": ResumeStatus.PARSED.value
-                    })
-                    return
-                else:
-                    raise Exception("No job_id returned from AI parser and not completed.")
-
-            status_url = settings.AI_PARSER_URL.replace("/upload", f"/status/{job_id}")
-            
-            # Poll for completion
             parsed_data = {}
             ai_evaluation = {}
-            
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                for _ in range(60): # 60 * 5 = 300 seconds max
-                    res = await client.get(status_url)
-                    res.raise_for_status()
-                    status_data = res.json()
-                    
-                    if status_data.get("status") == "completed":
-                        parsed_data = status_data.get("parsed_resume", {})
-                        ai_evaluation = status_data.get("evaluation", {})
-                        break
-                    elif status_data.get("status") == "error":
-                        raise Exception(f"AI Parser error: {status_data.get('evaluation')}")
+
+            job_id = ai_result.get("job_id")
+            if not job_id:
+                # Direct response from AI Parser (no async job_id)
+                logger.info(f"[AI_PARSER_RESPONSE] Received immediate parsing response for '{resume_id}'")
+                parsed_data = (
+                    ai_result.get("parsed_resume") or
+                    ai_result.get("parsed_data") or
+                    ai_result.get("data", {}).get("parsed_resume") or
+                    ai_result.get("data", {})
+                )
+                ai_evaluation = (
+                    ai_result.get("evaluation") or
+                    ai_result.get("ai_evaluation") or
+                    ai_result.get("data", {}).get("evaluation") or
+                    {}
+                )
+                if not parsed_data and ("full_name" in ai_result or "email" in ai_result):
+                    parsed_data = ai_result
+            else:
+                status_url = settings.AI_PARSER_URL.replace("/upload", f"/status/{job_id}")
+                
+                # Poll for completion
+                async with httpx.AsyncClient(timeout=30.0) as client:
+                    for _ in range(60): # 60 * 5 = 300 seconds max
+                        res = await client.get(status_url)
+                        res.raise_for_status()
+                        status_data = res.json()
                         
-                    await asyncio.sleep(5)
-                else:
-                    raise Exception("AI Parser polling timed out after 5 minutes")
-                    
-            # Check for email conflict
-            email = parsed_data.get("email")
-            email_conflict = False
-            existing_resume_id = None
-            if email and isinstance(email, str) and email.strip():
-                existing_doc = await self.resume_repo.find_by_email(user_id=user_id, email=email.strip())
-                if existing_doc and existing_doc["id"] != resume_id:
-                    email_conflict = True
-                    existing_resume_id = existing_doc["id"]
-            
-            await self.resume_repo.update(resume_id, {
-                "parsed_data": parsed_data,
-                "ai_evaluation": ai_evaluation,
-                "status": ResumeStatus.PARSED.value,
-                "email_conflict": email_conflict,
-                "existing_resume_id": existing_resume_id,
-            })
-            logger.info(f"Background AI Parsing completed for resume '{resume_id}'")
+                        if status_data.get("status") == "completed":
+                            parsed_data = status_data.get("parsed_resume", {})
+                            ai_evaluation = status_data.get("evaluation", {})
+                            break
+                        elif status_data.get("status") == "error":
+                            raise Exception(f"AI Parser error: {status_data.get('evaluation')}")
+                            
+                        await asyncio.sleep(5)
+                    else:
+                        raise Exception("AI Parser polling timed out after 5 minutes")
+
+            # Extract email from parsed_data (handles nested dict or direct string)
+            email = parsed_data.get("email") if isinstance(parsed_data, dict) else None
+            clean_email = email.strip() if (email and isinstance(email, str) and email.strip()) else None
+
+            existing_doc = None
+            if clean_email:
+                logger.info(f"[EXISTING_EMAIL_CHECK] Extracted email '{clean_email}' from parsed data for upload '{resume_id}'. Searching MongoDB...")
+                existing_doc = await self.resume_repo.find_by_email(email=clean_email, exclude_resume_id=resume_id)
+            else:
+                logger.info(f"[EXISTING_EMAIL_CHECK] No valid email found in parsed_data for upload '{resume_id}'. Keys in parsed_data: {list(parsed_data.keys()) if isinstance(parsed_data, dict) else 'Not a dict'}")
+
+            if existing_doc and existing_doc["id"] != resume_id:
+                logger.info(f"========== [EXISTING EMAIL FLOW TRIGGERED] ==========")
+                logger.info(f"[EXISTING_EMAIL_FLOW] Email '{clean_email}' matched existing candidate profile ID: '{existing_doc['id']}'.")
+                logger.info(f"[EXISTING_EMAIL_FLOW] Action: Will NOT create a new candidate. Backing up existing values to 'resume_log' and updating profile '{existing_doc['id']}'.")
+
+                # 1. Save ENTIRE OLD resume snapshot into resume_log model before updating
+                old_snapshot = dict(existing_doc)
+                old_snapshot.pop("_id", None)
+
+                log_doc = ResumeLogDocument(
+                    resume_id=existing_doc["id"],
+                    temp_upload_id=resume_id,
+                    user_id=user_id,
+                    email=clean_email,
+                    old_data=old_snapshot,
+                    action="AUTOMATIC_EMAIL_UPDATE",
+                )
+                await self.resume_log_repo.create(log_doc.to_dict())
+                logger.info(f"[EXISTING_EMAIL_FLOW] Step 1/3: Created ResumeLog snapshot ID '{log_doc.id}' in 'resume_logs' collection for candidate '{existing_doc['id']}'")
+
+                # Get temporary resume upload document metadata
+                temp_doc = await self.resume_repo.get_by_id(resume_id) or {}
+
+                # 2. Prepare updated fields for the existing resume model
+                other_docs = existing_doc.get("other_documents") or []
+                if existing_doc.get("s3_url") and existing_doc.get("original_filename"):
+                    other_docs.append({
+                        "filename": existing_doc.get("original_filename"),
+                        "s3_url": existing_doc.get("s3_url"),
+                        "doc_type": "Previous Resume",
+                        "uploaded_at": existing_doc.get("upload_date")
+                    })
+
+                hr_updates = existing_doc.get("hr_updates") or []
+                hr_updates.append({
+                    "comment": f"Auto-updated profile with new resume upload '{original_filename}'. Previous version backed up to resume_log.",
+                    "author": "System",
+                    "updated_at": utc_now().isoformat()
+                })
+
+                updated_existing_fields = {
+                    "filename": temp_doc.get("filename") or original_filename,
+                    "original_filename": original_filename,
+                    "file_path": file_path,
+                    "s3_url": temp_doc.get("s3_url"),
+                    "file_hash": temp_doc.get("file_hash"),
+                    "extracted_text": temp_doc.get("extracted_text"),
+                    "parsed_data": parsed_data,
+                    "ai_evaluation": ai_evaluation,
+                    "other_documents": other_docs,
+                    "hr_updates": hr_updates,
+                    "status": ResumeStatus.PARSED.value,
+                    "upload_date": utc_now().isoformat(),
+                    "email_conflict": False,
+                    "existing_resume_id": None,
+                    "is_auto_updated": True,
+                    "previous_upload_date": existing_doc.get("upload_date") or existing_doc.get("created_at"),
+                }
+                await self.resume_repo.update(existing_doc["id"], updated_existing_fields)
+                logger.info(f"[EXISTING_EMAIL_FLOW] Step 2/3: Updated existing candidate document '{existing_doc['id']}' in 'resumes' collection with new parsed values.")
+
+                # 3. Clean up temporary upload document so resumes collection ONLY contains the updated existing candidate profile
+                await self.resume_repo.delete(resume_id)
+                logger.info(f"[EXISTING_EMAIL_FLOW] Step 3/3: Deleted temporary upload record '{resume_id}' from 'resumes' collection so ONLY updated candidate profile '{existing_doc['id']}' remains!")
+                logger.info(f"=========================================================")
+            else:
+                await self.resume_repo.update(resume_id, {
+                    "parsed_data": parsed_data,
+                    "ai_evaluation": ai_evaluation,
+                    "status": ResumeStatus.PARSED.value,
+                    "email_conflict": False,
+                    "existing_resume_id": None,
+                })
+                logger.info(f"[NEW_CANDIDATE_FLOW] No existing email conflict. Completed AI Parsing for new candidate resume ID '{resume_id}'")
         except Exception as e:
             logger.error(f"Background AI Parsing failed for '{resume_id}': {e}")
             await self.resume_repo.update(resume_id, {
@@ -270,10 +344,10 @@ class ResumeService:
         updated_doc = await self.resume_repo.update_resume_fields(resume_id, update_fields, hr_update=hr_update_dict)
         return ResumeResponse.model_validate(updated_doc)
 
-    async def get_user_resumes(self, user_id: str, skip: int = 0, limit: int = 100) -> ResumeListResponse:
-        """Fetch list of resumes belonging to user."""
-        resumes = await self.resume_repo.get_by_user_id(user_id, skip=skip, limit=limit)
-        total = await self.resume_repo.count_by_user_id(user_id)
+    async def get_user_resumes(self, user_id: str, skip: int = 0, limit: int = 100, is_admin: bool = False) -> ResumeListResponse:
+        """Fetch list of resumes belonging to user (or all resumes if admin)."""
+        resumes = await self.resume_repo.get_by_user_id(user_id, skip=skip, limit=limit, is_admin=is_admin)
+        total = await self.resume_repo.count_by_user_id(user_id, is_admin=is_admin)
         items = [ResumeResponse.model_validate(r) for r in resumes]
         return ResumeListResponse(total=total, resumes=items)
 
@@ -290,8 +364,9 @@ class ResumeService:
         keywords: Optional[List[str]] = None,
         skip: int = 0,
         limit: int = 100,
+        is_admin: bool = False,
     ) -> ResumeListResponse:
-        """Filter resumes belonging to user matching criteria."""
+        """Filter resumes matching criteria."""
         resumes = await self.resume_repo.filter_resumes(
             user_id=user_id,
             job_title=job_title,
@@ -301,8 +376,10 @@ class ResumeService:
             employment_type=employment_type,
             year_of_passing=year_of_passing,
             skills=skills,
+            keywords=keywords,
             skip=skip,
             limit=limit,
+            is_admin=is_admin,
         )
         total = len(resumes)
         items = [ResumeResponse.model_validate(r) for r in resumes]
@@ -353,14 +430,16 @@ class ResumeService:
         user_id: str,
         skip: int = 0,
         limit: int = 100,
+        is_admin: bool = False,
     ):
         """
-        Return aggregated summary arrays across user's parsed resumes.
+        Return aggregated summary arrays across parsed resumes.
         """
         raw_resumes = await self.resume_repo.get_parsed_resume_summary(
             user_id=user_id,
             skip=skip,
             limit=limit,
+            is_admin=is_admin,
         )
 
         locations = set()
@@ -561,3 +640,15 @@ class ResumeService:
         
         updated_doc = await self.resume_repo.update_resume_fields(resume_id, {"other_documents": other_docs})
         return ResumeResponse.model_validate(updated_doc)
+
+    async def get_resume_logs(self, resume_id: str, user_id: str, is_admin: bool = False) -> ResumeLogListResponse:
+        """Fetch version history logs for a resume."""
+        resume = await self.resume_repo.get_by_id(resume_id)
+        if not resume:
+            raise NotFoundError("Resume not found.")
+        if not is_admin and resume["user_id"] != user_id:
+            raise NotFoundError("Resume not found.")
+
+        logs = await self.resume_log_repo.get_logs_by_resume_id(resume_id)
+        items = [ResumeLogResponse.model_validate(l) for l in logs]
+        return ResumeLogListResponse(total=len(items), logs=items)

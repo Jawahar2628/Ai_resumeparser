@@ -10,7 +10,8 @@ export default function Upload() {
   const [parsedResponse, setParsedResponse] = useState<any>(null);
   const [showModal, setShowModal] = useState(false);
   const [activeTab, setActiveTab] = useState<string>("personal");
-  
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
   const [otherDocFile, setOtherDocFile] = useState<File | null>(null);
   const [otherDocType, setOtherDocType] = useState<string>("Cover Letter");
   const [otherDocTitle, setOtherDocTitle] = useState<string>("");
@@ -71,8 +72,8 @@ export default function Upload() {
 
       const resData = await response.json();
 
-      if (response.status === 401 || (resData.detail && typeof resData.detail === 'string' && 
-          (resData.detail.toLowerCase().includes('token') || resData.detail.toLowerCase().includes('signature') || resData.detail.toLowerCase().includes('authentication')))) {
+      if (response.status === 401 || (resData.detail && typeof resData.detail === 'string' &&
+        (resData.detail.toLowerCase().includes('token') || resData.detail.toLowerCase().includes('signature') || resData.detail.toLowerCase().includes('authentication')))) {
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         localStorage.removeItem('user');
@@ -86,6 +87,7 @@ export default function Upload() {
 
       const initialResult = resData.data || resData;
       const resumeId = initialResult.id;
+      console.log(`[FRONTEND_UPLOAD] File uploaded successfully. Initial Resume ID: '${resumeId}', Status: '${initialResult.status}'`);
 
       let finalResult = initialResult;
       let currentStatus = (initialResult.status || "").toLowerCase();
@@ -94,6 +96,7 @@ export default function Upload() {
       while (currentStatus === "pending" && attempts < 60) {
         await new Promise(resolve => setTimeout(resolve, 5000));
         attempts++;
+        console.log(`[FRONTEND_UPLOAD_POLL] Checking status for Resume ID '${resumeId}' (Attempt ${attempts})...`);
 
         const statusRes = await fetch(`${RESUME_LIST}/${resumeId}`, {
           method: 'GET',
@@ -107,6 +110,7 @@ export default function Upload() {
 
         finalResult = statusData.data || statusData;
         currentStatus = (finalResult.status || "").toLowerCase();
+        console.log(`[FRONTEND_UPLOAD_POLL] Status response received:`, finalResult);
 
         if (currentStatus === "failed" || currentStatus === "error") {
           throw new Error("AI Parsing failed on the backend.");
@@ -117,24 +121,29 @@ export default function Upload() {
         throw new Error("Parsing timed out after 5 minutes.");
       }
 
-      if (finalResult.email_conflict) {
-        if (window.confirm("A candidate with this email already exists. Do you want to UPDATE the existing candidate profile? (Click Cancel to keep as a separate new profile)")) {
-          const mergeRes = await fetch(`http://127.0.0.1:8000/api/v1/resumes/${finalResult.id}/merge?existing_resume_id=${finalResult.existing_resume_id}`, {
-            method: 'POST',
-            headers,
-          });
-          const mergeData = await mergeRes.json();
-          if (mergeRes.ok) {
-            finalResult = mergeData.data || mergeData;
-            alert("Candidate profile successfully updated and merged!");
-          } else {
-            alert("Merge failed. Showing as separate profile.");
-          }
-        }
-      }
-
+      console.log(`[FRONTEND_UPLOAD_SUCCESS] Resume parsing completed! Final Candidate ID: '${finalResult.id}', Email: '${finalResult.parsed_data?.email}'`);
       setIsParsing(false);
       setParsedResponse(finalResult);
+      if (finalResult.is_auto_updated) {
+        const candName = finalResult.parsed_data?.full_name || "Candidate";
+        const rawOldDate = finalResult.previous_upload_date || (finalResult.other_documents && finalResult.other_documents.length > 0 ? finalResult.other_documents[finalResult.other_documents.length - 1]?.uploaded_at : null);
+        let formattedOldDate = "";
+        if (rawOldDate) {
+          try {
+            formattedOldDate = new Date(rawOldDate).toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+            });
+          } catch {
+            formattedOldDate = String(rawOldDate).split("T")[0];
+          }
+        }
+        const dateText = formattedOldDate ? ` (Created on: ${formattedOldDate})` : "";
+        setToastMessage(`The candidate profile for "${candName}" already exists${dateText}, so the resume has been updated.`);
+      } else {
+        setToastMessage(null);
+      }
       setShowModal(true);
     } catch (e: any) {
       setIsParsing(false);
@@ -172,11 +181,11 @@ export default function Upload() {
     try {
       const formData = new FormData();
       formData.append('file', otherDocFile);
-      
+
       const token = localStorage.getItem('token') || localStorage.getItem('access_token');
       const headers: Record<string, string> = {};
       if (token) headers['Authorization'] = `Bearer ${token}`;
-      
+
       const res = await fetch(`${RESUME_DOCUMENTS(parsedResponse.id)}?doc_type=${encodeURIComponent(otherDocType)}&doc_title=${encodeURIComponent(otherDocTitle)}`, {
         method: 'POST',
         headers,
@@ -234,6 +243,22 @@ export default function Upload() {
             </div>
           ))}
         </div>
+
+        {/* Toast Message for Existing Email Update */}
+        {toastMessage && (
+          <div className="p-4 bg-amber-500/15 border border-amber-500/40 rounded-2xl flex items-center justify-between text-amber-300 shadow-xl backdrop-blur-md">
+            <div className="flex items-center gap-3">
+              <CheckCircle2 size={20} className="text-amber-400 shrink-0" />
+              <p className="text-xs sm:text-sm font-semibold">{toastMessage}</p>
+            </div>
+            <button
+              onClick={() => setToastMessage(null)}
+              className="text-amber-400 hover:text-amber-200 p-1 rounded-lg transition-colors"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        )}
 
         {/* Content Layout Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -313,6 +338,12 @@ export default function Upload() {
 
             {parsedResponse && (
               <div className="mt-6 p-5 bg-[#0a0d24] border border-emerald-800/50 rounded-2xl space-y-4 shadow-lg">
+                {parsedResponse.is_auto_updated && (
+                  <div className="p-3 bg-amber-500/15 border border-amber-500/30 rounded-xl text-amber-300 text-xs flex items-center gap-2 font-semibold">
+                    <CheckCircle2 size={16} className="text-amber-400 shrink-0" />
+                    <span>{toastMessage || "This candidate profile already exists, so the resume has been updated"}</span>
+                  </div>
+                )}
                 <div className="flex items-center justify-between">
                   <h4 className="text-sm font-bold text-emerald-400 flex items-center gap-2">
                     <CheckCircle2 size={16} /> Resume Uploaded & Auto Extracted Successfully!
@@ -410,8 +441,8 @@ export default function Upload() {
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
                     className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold transition-all whitespace-nowrap ${activeTab === tab.id
-                        ? "bg-blue-600 text-white shadow-md"
-                        : "text-slate-400 hover:text-slate-200 hover:bg-slate-900"
+                      ? "bg-blue-600 text-white shadow-md"
+                      : "text-slate-400 hover:text-slate-200 hover:bg-slate-900"
                       }`}
                   >
                     <Icon size={14} />
@@ -578,19 +609,19 @@ export default function Upload() {
               {activeTab === "documents" && (
                 <div className="space-y-6">
                   <h4 className="text-sm font-bold text-blue-400 uppercase tracking-wider">Candidate Documents</h4>
-                  
+
                   {/* Upload Form */}
                   <div className="bg-[#030514] border border-slate-800 p-5 rounded-xl space-y-4">
                     <h5 className="text-xs font-bold text-slate-200">Upload New Document</h5>
                     <div className="flex flex-col md:flex-row gap-4 items-center">
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         placeholder="Title (Optional)"
                         value={otherDocTitle}
                         onChange={e => setOtherDocTitle(e.target.value)}
                         className="bg-slate-900 border border-slate-800 text-xs text-white p-2.5 rounded-lg focus:outline-none focus:border-blue-500 w-full md:w-1/4"
                       />
-                      <select 
+                      <select
                         value={otherDocType}
                         onChange={e => setOtherDocType(e.target.value)}
                         className="bg-slate-900 border border-slate-800 text-xs text-white p-2.5 rounded-lg focus:outline-none focus:border-blue-500 w-full md:w-1/4"
@@ -601,14 +632,14 @@ export default function Upload() {
                         <option value="Previous Resume">Previous Resume</option>
                         <option value="Other">Other</option>
                       </select>
-                      
-                      <input 
-                        type="file" 
+
+                      <input
+                        type="file"
                         onChange={e => e.target.files && setOtherDocFile(e.target.files[0])}
                         className="text-xs text-slate-300 w-full md:w-1/2 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700"
                       />
-                      
-                      <button 
+
+                      <button
                         onClick={handleUploadOtherDoc}
                         disabled={!otherDocFile || isUploadingDoc}
                         className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white px-5 py-2.5 rounded-lg text-xs font-bold transition-colors whitespace-nowrap w-full md:w-auto"
@@ -635,9 +666,9 @@ export default function Upload() {
                                 <p className="text-[10px] text-slate-400">{doc.doc_type} • {new Date(doc.uploaded_at).toLocaleDateString()}</p>
                               </div>
                             </div>
-                            <a 
-                              href={doc.s3_url} 
-                              target="_blank" 
+                            <a
+                              href={doc.s3_url}
+                              target="_blank"
                               rel="noreferrer"
                               className="text-blue-400 hover:text-blue-300 bg-blue-900/20 p-2 rounded-lg transition-colors"
                             >

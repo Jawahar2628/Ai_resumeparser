@@ -18,6 +18,16 @@ async def bootstrap_default_admin(db: AsyncIOMotorDatabase) -> None:
     """
     users_collection = db[USERS_COLLECTION]
 
+    # Ensure Collections and Indexes exist
+    from app.utils.constants import RESUMES_COLLECTION, RESUME_LOGS_COLLECTION
+    try:
+        await db[RESUME_LOGS_COLLECTION].create_index([("resume_id", 1)])
+        await db[RESUME_LOGS_COLLECTION].create_index([("email", 1)])
+        await db[RESUMES_COLLECTION].create_index([("parsed_data.email", 1)])
+        logger.info(f"Initialized MongoDB collections '{RESUME_LOGS_COLLECTION}' and '{RESUMES_COLLECTION}' with indexes.")
+    except Exception as idx_err:
+        logger.warning(f"Index initialization note: {idx_err}")
+
     admin_email = settings.DEFAULT_ADMIN_EMAIL.strip().lower()
     existing_admin = await users_collection.find_one({"email": admin_email})
 

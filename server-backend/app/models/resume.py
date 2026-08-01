@@ -25,6 +25,9 @@ class ResumeDocument(BaseModel):
     other_documents: Optional[List[Dict[str, Any]]] = Field(default_factory=list)
     email_conflict: bool = False
     existing_resume_id: Optional[str] = None
+    redirect_id: Optional[str] = None
+    is_auto_updated: bool = False
+    previous_upload_date: Optional[str] = None
     upload_date: str = Field(default_factory=lambda: utc_now().isoformat())
     status: ResumeStatus = ResumeStatus.PENDING
 

@@ -16,10 +16,14 @@ from app.utils.enums import UserRole
 router = APIRouter(prefix="/api/v1/resumes", tags=["Resumes"])
 
 
+from app.repositories.resume_log_repository import ResumeLogRepository
+
+
 def get_resume_controller(db: AsyncIOMotorDatabase = Depends(get_database)) -> ResumeController:
     """Dependency injector for ResumeController."""
     resume_repo = ResumeRepository(db)
-    resume_service = ResumeService(resume_repo)
+    resume_log_repo = ResumeLogRepository(db)
+    resume_service = ResumeService(resume_repo, resume_log_repo=resume_log_repo)
     return ResumeController(resume_service)
 
 
@@ -50,7 +54,8 @@ async def list_resumes(
     current_user: dict = Depends(get_current_active_user),
     controller: ResumeController = Depends(get_resume_controller),
 ):
-    return await controller.list_resumes(current_user["id"], skip=skip, limit=limit)
+    is_admin = current_user.get("role") in [UserRole.ADMIN, UserRole.ADMIN.value, "admin", "superadmin"]
+    return await controller.list_resumes(current_user["id"], skip=skip, limit=limit, is_admin=is_admin)
 
 
 @router.get(
@@ -73,6 +78,7 @@ async def match_resumes(
     current_user: dict = Depends(get_current_active_user),
     controller: ResumeController = Depends(get_resume_controller),
 ):
+    is_admin = current_user.get("role") in [UserRole.ADMIN, UserRole.ADMIN.value, "admin", "superadmin"]
     return await controller.filter_resumes(
         user_id=current_user["id"],
         job_title=job_title,
@@ -85,6 +91,7 @@ async def match_resumes(
         keywords=keywords,
         skip=skip,
         limit=limit,
+        is_admin=is_admin,
     )
 
 
@@ -100,10 +107,12 @@ async def parsed_resume_summary(
     current_user: dict = Depends(get_current_active_user),
     controller: ResumeController = Depends(get_resume_controller),
 ):
+    is_admin = current_user.get("role") in [UserRole.ADMIN, UserRole.ADMIN.value, "admin", "superadmin"]
     return await controller.parsed_resume_summary(
         user_id=current_user["id"],
         skip=skip,
         limit=limit,
+        is_admin=is_admin,
     )
 
 
@@ -198,3 +207,17 @@ async def add_document(
 ):
     is_admin = current_user.get("role") == UserRole.ADMIN
     return await controller.add_document(resume_id, file, doc_type, current_user["id"], doc_title=doc_title, is_admin=is_admin)
+
+@router.get(
+    "/{resume_id}/logs",
+    status_code=status.HTTP_200_OK,
+    summary="Get resume version logs",
+    description="Retrieve version backup history snapshots saved for a resume before updates occurred.",
+)
+async def get_resume_logs(
+    resume_id: str,
+    current_user: dict = Depends(get_current_active_user),
+    controller: ResumeController = Depends(get_resume_controller),
+):
+    is_admin = current_user.get("role") in [UserRole.ADMIN, UserRole.ADMIN.value, "admin", "superadmin"]
+    return await controller.get_resume_logs(resume_id, current_user["id"], is_admin=is_admin)

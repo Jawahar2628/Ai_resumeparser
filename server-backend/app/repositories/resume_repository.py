@@ -16,17 +16,48 @@ class ResumeRepository(BaseRepository):
     def __init__(self, db: AsyncIOMotorDatabase):
         super().__init__(db, RESUMES_COLLECTION)
 
-    async def get_by_user_id(self, user_id: str, skip: int = 0, limit: int = 100) -> List[Dict[str, Any]]:
-        """Fetch list of resumes belonging to specific user."""
-        return await self.find_many(query={"user_id": user_id}, skip=skip, limit=limit, sort_by="upload_date", descending=True)
+    async def get_by_id(self, id_val: str) -> Optional[Dict[str, Any]]:
+        """Find a single document by string 'id' field, following redirect_id or resume_logs mapping if merged."""
+        doc = await super().get_by_id(id_val)
+        if doc:
+            if doc.get("redirect_id"):
+                target_doc = await super().get_by_id(doc["redirect_id"])
+                if target_doc:
+                    return target_doc
+            return doc
+        
+        # If temporary upload document was deleted after merging into candidate profile
+        from app.utils.constants import RESUME_LOGS_COLLECTION
+        log_entry = await self.db[RESUME_LOGS_COLLECTION].find_one({"temp_upload_id": id_val})
+        if log_entry and log_entry.get("resume_id"):
+            return await super().get_by_id(log_entry["resume_id"])
+            
+        return None
 
-    async def count_by_user_id(self, user_id: str) -> int:
-        """Count total resumes uploaded by user."""
-        return await self.count(query={"user_id": user_id})
+    async def get_by_user_id(self, user_id: Optional[str] = None, skip: int = 0, limit: int = 100, is_admin: bool = False) -> List[Dict[str, Any]]:
+        """Fetch list of resumes belonging to user (or all resumes if is_admin or user_id is None)."""
+        from loguru import logger
+        query: Dict[str, Any] = {"$or": [{"redirect_id": None}, {"redirect_id": {"$exists": False}}]}
+        if user_id and not is_admin:
+            query["user_id"] = user_id
+        logger.info(f"[GET_BY_USER_ID] Executing MongoDB query: {query}, skip={skip}, limit={limit}, is_admin={is_admin}")
+        results = await self.find_many(query=query, skip=skip, limit=limit, sort_by="upload_date", descending=True)
+        logger.info(f"[GET_BY_USER_ID] Query returned {len(results)} resume document(s)")
+        return results
+
+    async def count_by_user_id(self, user_id: Optional[str] = None, is_admin: bool = False) -> int:
+        """Count total resumes (or all resumes if is_admin or user_id is None)."""
+        from loguru import logger
+        query: Dict[str, Any] = {"$or": [{"redirect_id": None}, {"redirect_id": {"$exists": False}}]}
+        if user_id and not is_admin:
+            query["user_id"] = user_id
+        count_val = await self.count(query=query)
+        logger.info(f"[COUNT_BY_USER_ID] Count query: {query} -> Total: {count_val}")
+        return count_val
 
     async def filter_resumes(
         self,
-        user_id: str,
+        user_id: Optional[str] = None,
         job_title: Optional[List[str]] = None,
         min_experience: Optional[float] = None,
         max_experience: Optional[float] = None,
@@ -37,11 +68,14 @@ class ResumeRepository(BaseRepository):
         keywords: Optional[List[str]] = None,
         skip: int = 0,
         limit: int = 100,
+        is_admin: bool = False,
     ) -> List[Dict[str, Any]]:
         """Filter resumes based on multiple criteria matching parsed_data fields."""
         import re
 
-        and_conditions: List[Dict[str, Any]] = [{"user_id": user_id}]
+        and_conditions: List[Dict[str, Any]] = [{"$or": [{"redirect_id": None}, {"redirect_id": {"$exists": False}}]}]
+        if user_id and not is_admin:
+            and_conditions.append({"user_id": user_id})
 
         if job_title and any(j.strip() for j in job_title):
             jt_queries = []
@@ -167,9 +201,45 @@ class ResumeRepository(BaseRepository):
         """Check if a file with this hash already exists across the system."""
         return await self.find_one({"file_hash": file_hash})
 
-    async def find_by_email(self, user_id: str, email: str) -> Optional[Dict[str, Any]]:
-        """Check if a parsed resume already exists with this email for the user."""
-        return await self.find_one({"user_id": user_id, "parsed_data.email": email})
+    async def find_by_email(self, email: str, user_id: Optional[str] = None, exclude_resume_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
+        """Check if a parsed resume already exists with this email across MongoDB (case-insensitive)."""
+        import re
+        from loguru import logger
+        if not email or not isinstance(email, str) or not email.strip():
+            return None
+        email_clean = email.strip()
+        email_regex = re.compile(f"^{re.escape(email_clean)}$", re.IGNORECASE)
+        
+        email_or_conditions = [
+            {"parsed_data.email": {"$regex": email_regex}},
+            {"email": {"$regex": email_regex}},
+        ]
+        
+        query: Dict[str, Any] = {
+            "$or": email_or_conditions,
+            "redirect_id": {"$in": [None, None]}
+        }
+        
+        # Exclude temporary upload document if ID provided
+        if exclude_resume_id:
+            query["id"] = {"$ne": exclude_resume_id}
+
+        logger.info(f"[FIND_BY_EMAIL] Searching MongoDB for candidate with email '{email_clean}'...")
+        result = await self.find_one(query)
+        
+        # Fallback check without redirect_id filter if needed
+        if not result:
+            fallback_query: Dict[str, Any] = {"$or": email_or_conditions}
+            if exclude_resume_id:
+                fallback_query["id"] = {"$ne": exclude_resume_id}
+            result = await self.find_one(fallback_query)
+
+        if result:
+            logger.info(f"[FIND_BY_EMAIL] SUCCESS: Found existing candidate document ID '{result['id']}' for email '{email_clean}'")
+        else:
+            logger.info(f"[FIND_BY_EMAIL] NO MATCH: No existing candidate document found in MongoDB for email '{email_clean}'")
+
+        return result
 
     async def update_status_and_text(self, resume_id: str, status: ResumeStatus, extracted_text: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """Update resume extraction status and extracted text content."""
@@ -197,17 +267,20 @@ class ResumeRepository(BaseRepository):
 
     async def get_parsed_resume_summary(
         self,
-        user_id: str,
+        user_id: Optional[str] = None,
         skip: int = 0,
         limit: int = 100,
+        is_admin: bool = False,
     ) -> List[Dict[str, Any]]:
         """
         Return only required parsed resume fields where status is PARSED.
         """
-        query = {
-            "user_id": user_id,
+        query: Dict[str, Any] = {
             "status": ResumeStatus.PARSED.value,
+            "$or": [{"redirect_id": None}, {"redirect_id": {"$exists": False}}],
         }
+        if user_id and not is_admin:
+            query["user_id"] = user_id
 
         projection = {
             "_id": 0,

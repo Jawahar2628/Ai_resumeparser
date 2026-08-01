@@ -25,9 +25,9 @@ class ResumeController:
             status_code=status.HTTP_201_CREATED,
         )
 
-    async def list_resumes(self, user_id: str, skip: int = 0, limit: int = 100) -> JSONResponse:
-        """Process request to list all user uploaded resumes."""
-        resume_list_response = await self.resume_service.get_user_resumes(user_id, skip=skip, limit=limit)
+    async def list_resumes(self, user_id: str, skip: int = 0, limit: int = 100, is_admin: bool = False) -> JSONResponse:
+        """Process request to list uploaded resumes."""
+        resume_list_response = await self.resume_service.get_user_resumes(user_id, skip=skip, limit=limit, is_admin=is_admin)
         return success_response(
             data=resume_list_response.model_dump(),
             message="Resumes retrieved successfully.",
@@ -46,6 +46,7 @@ class ResumeController:
         keywords: list[str] = None,
         skip: int = 0,
         limit: int = 100,
+        is_admin: bool = False,
     ) -> JSONResponse:
         """Process request to filter resumes based on criteria."""
         filtered_response = await self.resume_service.filter_resumes(
@@ -60,6 +61,7 @@ class ResumeController:
             keywords=keywords,
             skip=skip,
             limit=limit,
+            is_admin=is_admin,
         )
         return success_response(
             data=filtered_response.model_dump(),
@@ -104,6 +106,7 @@ class ResumeController:
         user_id: str,
         skip: int = 0,
         limit: int = 100,
+        is_admin: bool = False,
     ):
         """
         Get parsed resume summary.
@@ -112,6 +115,7 @@ class ResumeController:
             user_id=user_id,
             skip=skip,
             limit=limit,
+            is_admin=is_admin,
         )
 
         return success_response(
@@ -133,4 +137,12 @@ class ResumeController:
         return success_response(
             data=resume_response.model_dump(),
             message="Document added successfully.",
+        )
+
+    async def get_resume_logs(self, resume_id: str, user_id: str, is_admin: bool = False) -> JSONResponse:
+        """Process request to fetch version logs for a resume."""
+        logs_response = await self.resume_service.get_resume_logs(resume_id, user_id, is_admin=is_admin)
+        return success_response(
+            data=logs_response.model_dump(),
+            message="Resume logs retrieved successfully.",
         )

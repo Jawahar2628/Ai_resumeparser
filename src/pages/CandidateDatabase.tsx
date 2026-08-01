@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { Search, Filter, Download, Eye, FileText, X, User, Briefcase } from "lucide-react";
+import { Search, Filter, Download, Eye, FileText, X, User, Briefcase, History } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { getResumes, getResumeById } from "../utils/Api";
+import { getResumes, getResumeById, getResumeLogs } from "../utils/Api";
 
 
 
@@ -17,6 +17,7 @@ export default function CandidateDatabase() {
 
   // Detailed candidate state for Modal when Eye icon is clicked
   const [selectedCandidateDetail, setSelectedCandidateDetail] = useState<any>(null);
+  const [candidateLogs, setCandidateLogs] = useState<any[]>([]);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [showModal, setShowModal] = useState(false);
 
@@ -64,9 +65,20 @@ export default function CandidateDatabase() {
     if (!realId) return;
     setLoadingDetail(true);
     setShowModal(true);
+    setCandidateLogs([]);
     try {
-      const detail = await getResumeById(realId);
-      setSelectedCandidateDetail(detail);
+      const [detail, logsRes] = await Promise.allSettled([
+        getResumeById(realId),
+        getResumeLogs(realId),
+      ]);
+      
+      if (detail.status === "fulfilled") {
+        setSelectedCandidateDetail(detail.value);
+      }
+      if (logsRes.status === "fulfilled") {
+        const logsData = logsRes.value;
+        setCandidateLogs(Array.isArray(logsData) ? logsData : logsData.logs || []);
+      }
     } catch (err) {
       console.error("Failed to fetch candidate details:", err);
     } finally {
@@ -381,6 +393,35 @@ export default function CandidateDatabase() {
                     </h3>
                     <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 max-h-48 overflow-y-auto text-xs text-slate-300 font-mono whitespace-pre-wrap">
                       {selectedCandidateDetail.extracted_text}
+                    </div>
+                  </div>
+                )}
+
+                {/* Candidate Version History / Resume Logs */}
+                {candidateLogs && candidateLogs.length > 0 && (
+                  <div className="space-y-2 pt-2 border-t border-slate-800">
+                    <h3 className="text-xs font-semibold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <History size={14} /> Resume Version History ({candidateLogs.length} Old Backup{candidateLogs.length > 1 ? "s" : ""})
+                    </h3>
+                    <div className="space-y-2 max-h-44 overflow-y-auto">
+                      {candidateLogs.map((log: any, idx: number) => (
+                        <div key={log.id || idx} className="p-3 bg-amber-950/20 border border-amber-900/30 rounded-xl text-xs space-y-1">
+                          <div className="flex justify-between items-center text-amber-300 font-medium">
+                            <span>{log.action || "AUTOMATIC_EMAIL_UPDATE"}</span>
+                            <span className="text-[11px] text-slate-400">
+                              {log.created_at ? new Date(log.created_at).toLocaleString() : "N/A"}
+                            </span>
+                          </div>
+                          <p className="text-slate-400 text-[11px]">
+                            Backed up prior values for <span className="text-slate-200">{log.email}</span> before updating.
+                          </p>
+                          {log.old_data?.original_filename && (
+                            <p className="text-slate-400 text-[11px]">
+                              Previous File: <span className="text-amber-200">{log.old_data.original_filename}</span>
+                            </p>
+                          )}
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
