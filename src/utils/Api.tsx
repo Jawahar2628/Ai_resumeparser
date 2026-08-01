@@ -6,6 +6,7 @@ export const RESUME_MATCH = `${BASE_URL}/resumes/match`;
 export const RESUME_SUMMARY = `${BASE_URL}/resumes/parsed-summary`;
 export const RESUME_MERGE = (id: string) => `${BASE_URL}/resumes/${id}/merge`;
 export const RESUME_DOCUMENTS = (id: string) => `${BASE_URL}/resumes/${id}/documents`;
+export const RESUME_LOGS = (id: string) => `${BASE_URL}/resumes/${id}/logs`;
 export const INTERVIEWS_URL = `${BASE_URL}/interviews`;
 
 export const AUTH_LOGIN = `${BASE_URL}/auth/login`;
@@ -237,6 +238,26 @@ export const getResumeById = async (resumeId: string) => {
 
   if (!response.ok) {
     throw new Error(resData.detail || "Failed to fetch resume details");
+  }
+
+  return resData.data || resData;
+};
+
+export const getResumeLogs = async (resumeId: string) => {
+  const token = localStorage.getItem("access_token") || "";
+  const response = await fetch(RESUME_LOGS(resumeId), {
+    method: "GET",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  const resData = await response.json();
+  handleAuthError(response, resData);
+
+  if (!response.ok) {
+    throw new Error(resData.detail || "Failed to fetch resume logs");
   }
 
   return resData.data || resData;

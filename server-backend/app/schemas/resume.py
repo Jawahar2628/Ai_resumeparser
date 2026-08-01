@@ -45,6 +45,9 @@ class ResumeResponse(BaseModel):
     parsed_data: Optional[Dict[str, Any]] = None
     ai_evaluation: Optional[Dict[str, Any]] = None
     hr_updates: Optional[List[Dict[str, Any]]] = None
+    other_documents: Optional[List[Dict[str, Any]]] = None
+    is_auto_updated: Optional[bool] = False
+    previous_upload_date: Optional[str] = None
     upload_date: str
     status: ResumeStatus
 

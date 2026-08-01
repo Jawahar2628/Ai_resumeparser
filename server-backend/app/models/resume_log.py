@@ -13,6 +13,7 @@ class ResumeLogDocument(BaseModel):
 
     id: str = Field(default_factory=generate_uuid)
     resume_id: str
+    temp_upload_id: Optional[str] = None
     user_id: str
     email: Optional[str] = None
     old_data: Dict[str, Any] = Field(default_factory=dict)

@@ -54,7 +54,8 @@ async def list_resumes(
     current_user: dict = Depends(get_current_active_user),
     controller: ResumeController = Depends(get_resume_controller),
 ):
-    return await controller.list_resumes(current_user["id"], skip=skip, limit=limit)
+    is_admin = current_user.get("role") in [UserRole.ADMIN, UserRole.ADMIN.value, "admin", "superadmin"]
+    return await controller.list_resumes(current_user["id"], skip=skip, limit=limit, is_admin=is_admin)
 
 
 @router.get(
@@ -77,6 +78,7 @@ async def match_resumes(
     current_user: dict = Depends(get_current_active_user),
     controller: ResumeController = Depends(get_resume_controller),
 ):
+    is_admin = current_user.get("role") in [UserRole.ADMIN, UserRole.ADMIN.value, "admin", "superadmin"]
     return await controller.filter_resumes(
         user_id=current_user["id"],
         job_title=job_title,
@@ -89,6 +91,7 @@ async def match_resumes(
         keywords=keywords,
         skip=skip,
         limit=limit,
+        is_admin=is_admin,
     )
 
 
@@ -104,10 +107,12 @@ async def parsed_resume_summary(
     current_user: dict = Depends(get_current_active_user),
     controller: ResumeController = Depends(get_resume_controller),
 ):
+    is_admin = current_user.get("role") in [UserRole.ADMIN, UserRole.ADMIN.value, "admin", "superadmin"]
     return await controller.parsed_resume_summary(
         user_id=current_user["id"],
         skip=skip,
         limit=limit,
+        is_admin=is_admin,
     )
 
 
@@ -214,5 +219,5 @@ async def get_resume_logs(
     current_user: dict = Depends(get_current_active_user),
     controller: ResumeController = Depends(get_resume_controller),
 ):
-    is_admin = current_user.get("role") == UserRole.ADMIN
+    is_admin = current_user.get("role") in [UserRole.ADMIN, UserRole.ADMIN.value, "admin", "superadmin"]
     return await controller.get_resume_logs(resume_id, current_user["id"], is_admin=is_admin)
