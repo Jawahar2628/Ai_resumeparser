@@ -1,10 +1,19 @@
 import { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
-import { Search, Bell, Settings, FileText, Sparkles, CheckCircle2, Video, ChevronDown } from 'lucide-react';
+import { Search, Bell, Settings, FileText, Sparkles, CheckCircle2, Video, ChevronDown, Loader2 } from 'lucide-react';
+import { getDashboardMetrics } from '../utils/Api';
 
 export default function Dashboard() {
   const [userName, setUserName] = useState<string>("Senthil C");
   const [userRole, setUserRole] = useState<string>("Recruiter");
+  
+  const [loading, setLoading] = useState<boolean>(true);
+  const [stats, setStats] = useState<any[]>([]);
+  const [pipelineData, setPipelineData] = useState<any[]>([]);
+  const [statusData, setStatusData] = useState<any[]>([]);
+  const [recentActivities, setRecentActivities] = useState<any[]>([]);
+  const [upcomingInterviews, setUpcomingInterviews] = useState<any[]>([]);
+  const [totalPipeline, setTotalPipeline] = useState<number>(0);
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
@@ -21,44 +30,48 @@ export default function Dashboard() {
         console.error("Failed to parse user data from localStorage", e);
       }
     }
+
+    const fetchDashboard = async () => {
+      try {
+        const data = await getDashboardMetrics();
+        setStats(data.stats || []);
+        setPipelineData(data.pipelineData || []);
+        setStatusData(data.statusData || []);
+        setRecentActivities(data.recentActivities || []);
+        setUpcomingInterviews(data.upcomingInterviews || []);
+        
+        let sum = 0;
+        if (data.statusData) {
+            data.statusData.forEach((s: any) => sum += s.count);
+        }
+        setTotalPipeline(sum);
+      } catch (error) {
+        console.error("Failed to load dashboard metrics", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchDashboard();
   }, []);
 
-  const stats = [
-    { label: "Total Resumes", value: "2,453", change: "+16.9% this month", changeColor: "text-emerald-500" },
-    { label: "AI Parsed Today", value: "128", change: "+12.3% today", changeColor: "text-emerald-500" },
-    { label: "JD Matches", value: "342", change: "+8.2% this month", changeColor: "text-emerald-500" },
-    { label: "Interviews", value: "56", change: "+15.4% this week", changeColor: "text-emerald-500" },
-    { label: "Offers", value: "18", change: "+20% this month", changeColor: "text-emerald-500" },
-  ];
+  const getIcon = (type: string) => {
+    switch(type) {
+      case 'sparkles': return <Sparkles size={14} className="text-amber-500" />;
+      case 'video': return <Video size={14} className="text-purple-500" />;
+      case 'check': return <CheckCircle2 size={14} className="text-emerald-500" />;
+      case 'file':
+      default: return <FileText size={14} className="text-blue-500" />;
+    }
+  };
 
-  const pipelineData = [
-    { stage: "Resumes Uploaded", count: "2,453", width: "w-full", bg: "bg-blue-600" },
-    { stage: "Shortlisted", count: "845", width: "w-[80%]", bg: "bg-sky-500" },
-    { stage: "Interviews", count: "234", width: "w-[60%]", bg: "bg-emerald-400" },
-    { stage: "Client Interviews", count: "56", width: "w-[40%]", bg: "bg-emerald-600" },
-    { stage: "Offers", count: "18", width: "w-[20%]", bg: "bg-emerald-200" },
-  ];
-
-  const statusData = [
-    { name: "New", percentage: "35%", count: 858, color: "#2563eb" },
-    { name: "Shortlisted", percentage: "28%", count: 686, color: "#06b6d4" },
-    { name: "Interview", percentage: "17%", count: 417, color: "#34d399" },
-    { name: "Client Interview", percentage: "10%", count: 245, color: "#f59e0b" },
-    { name: "Offered", percentage: "10%", count: 247, color: "#64748b" },
-  ];
-
-  const recentActivities = [
-    { title: "Resume parsed - John Doe", time: "2 mins ago", icon: <FileText size={14} className="text-blue-500" />, bg: "bg-blue-50 border-blue-200" },
-    { title: "JD Match completed - Java Developer", time: "15 mins ago", icon: <Sparkles size={14} className="text-amber-500" />, bg: "bg-amber-50 border-amber-200" },
-    { title: "Technical Interview completed - Priya S", time: "1 hour ago", icon: <CheckCircle2 size={14} className="text-emerald-500" />, bg: "bg-emerald-50 border-emerald-200" },
-    { title: "Client feedback received - Ramesh K", time: "2 hours ago", icon: <Video size={14} className="text-purple-500" />, bg: "bg-purple-50 border-purple-200" },
-  ];
-
-  const upcomingInterviews = [
-    { time: "10:00 AM", role: "Java Developer - Technical", candidate: "Vijay" },
-    { time: "11:30 AM", role: "Project Interview", candidate: "Priya S" },
-    { time: "02:00 PM", role: "HR Interview", candidate: "Vikram M" },
-  ];
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-full bg-[#030514] text-white">
+        <Loader2 className="animate-spin mr-2" /> Loading Dashboard...
+      </div>
+    );
+  }
 
   return (
     <div className="bg-[#030514] text-slate-100 min-h-screen p-6 rounded-2xl space-y-6 font-sans">
@@ -165,7 +178,7 @@ export default function Dashboard() {
                 </PieChart>
               </ResponsiveContainer>
               <div className="absolute flex flex-col items-center justify-center text-center">
-                <span className="text-lg font-bold text-slate-100">2,453</span>
+                <span className="text-lg font-bold text-slate-100">{totalPipeline.toLocaleString()}</span>
                 <span className="text-xs text-slate-400 font-medium">Total</span>
               </div>
             </div>
@@ -196,7 +209,7 @@ export default function Dashboard() {
               <div key={i} className="flex items-center justify-between text-xs">
                 <div className="flex items-center gap-3">
                   <div className={`p-1.5 rounded-lg border border-slate-800 bg-[#030514]`}>
-                    {act.icon}
+                    {getIcon(act.icon_type)}
                   </div>
                   <span className="font-semibold text-slate-200">{act.title}</span>
                 </div>

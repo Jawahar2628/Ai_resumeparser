@@ -12,7 +12,7 @@ from app.core.config import settings
 from app.core.exceptions import register_exception_handlers
 from app.core.lifespan import lifespan
 from app.middleware.request_logger import RequestLoggerMiddleware
-from app.routes import auth, health, interview, resume, users
+from app.routes import auth, health, interview, resume, users, dashboard
 from app.routes import settings as settings_router
 from app.routes import templates
 
@@ -69,6 +69,7 @@ def create_application() -> FastAPI:
     app.include_router(interview.router)
     app.include_router(settings_router.router)
     app.include_router(templates.router)
+    app.include_router(dashboard.router)
     # ── Serve Frontend Static Files ──────────────────────────────────────────────
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     dist_path = os.path.join(os.path.dirname(BASE_DIR), "dist")

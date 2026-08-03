@@ -17,6 +17,7 @@ export const USER_ME = `${BASE_URL}/users/me`;
 export const SETTINGS_EMAIL = `${BASE_URL}/settings/email`;
 export const SETTINGS_EMAIL_TEST = `${BASE_URL}/settings/email/test`;
 export const MAIL_TEMPLATES_URL = `${BASE_URL}/templates`;
+export const DASHBOARD_METRICS = `${BASE_URL}/dashboard/metrics`;
 export interface LoginPayload {
   email: string;
   password: string;
@@ -259,6 +260,26 @@ export const getResumeLogs = async (resumeId: string) => {
 
   if (!response.ok) {
     throw new Error(resData.detail || "Failed to fetch resume logs");
+  }
+
+  return resData.data || resData;
+};
+
+export const getDashboardMetrics = async () => {
+  const token = localStorage.getItem("access_token") || "";
+  const response = await fetch(DASHBOARD_METRICS, {
+    method: "GET",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  const resData = await response.json();
+  handleAuthError(response, resData);
+
+  if (!response.ok) {
+    throw new Error(resData.detail || "Failed to fetch dashboard metrics");
   }
 
   return resData.data || resData;
