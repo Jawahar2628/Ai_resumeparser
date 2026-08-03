@@ -34,25 +34,33 @@ jobs:
           script: |
             cd /root/ai_resume/Ai_resumeparser/server-backend
 
+            # Create virtual environment if it doesn't exist
             if [ ! -d "venv" ]; then
               python3 -m venv venv
             fi
 
+            # Activate virtual environment
             source venv/bin/activate
 
+            # Install dependencies
             pip install --upgrade pip
-
             pip install -r requirements.txt
 
-            pm2 delete python-app || true
+            # Full path to PM2
+            PM2="/root/.nvm/versions/node/v20.20.2/bin/pm2"
 
-            pm2 start ./venv/bin/uvicorn \
+            # Restart application
+            $PM2 delete python-app || true
+
+            $PM2 start ./venv/bin/uvicorn \
               --interpreter none \
               --name python-app \
               -- app.main:app \
               --host 0.0.0.0 \
               --port 8012
 
-            pm2 save
+            # Save PM2 process list
+            $PM2 save
 
+            # Reload Nginx
             sudo systemctl reload nginx
