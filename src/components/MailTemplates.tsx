@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Mail, Plus, Edit2, Trash2, Send, X, Paperclip, CheckCircle2, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Mail, Plus, Edit2, Trash2, Send, X, CheckCircle2, AlertCircle } from 'lucide-react';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 import { MAIL_TEMPLATES_URL } from '../utils/Api';
