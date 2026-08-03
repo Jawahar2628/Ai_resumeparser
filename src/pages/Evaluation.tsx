@@ -650,10 +650,12 @@ export default function Evaluation() {
             <h3 className="text-sm font-bold text-slate-100">Certifications</h3>
             {certifications.length > 0 ? (
               <ul className="space-y-2 text-xs text-slate-300">
-                {certifications.map((cert: string, idx: number) => (
+                {certifications.map((cert: any, idx: number) => (
                   <li key={idx} className="flex items-center gap-2">
                     <CheckCircle2 size={14} className="text-emerald-400" />
-                    <span>{cert}</span>
+                    <span>
+                      {typeof cert === 'string' ? cert : `${cert.name || ''} ${cert.issued_by ? `(${cert.issued_by})` : ''} ${cert.year || ''}`}
+                    </span>
                   </li>
                 ))}
               </ul>
