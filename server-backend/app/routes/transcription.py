@@ -1,5 +1,6 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, status
+from fastapi import APIRouter, UploadFile, File, HTTPException, status, Body
 from app.controllers.transcription_controller import TranscriptionController
+from app.core.config import settings
 
 router = APIRouter(
     prefix="/api/transcription",
@@ -25,4 +26,55 @@ async def transcribe_audio(file: UploadFile = File(...)):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"An error occurred during transcription: {str(e)}"
+        )
+
+@router.post("/evaluate-answer", summary="Evaluate Answer")
+async def evaluate_answer(
+    transcript: str = Body(...),
+    expected_answer: str = Body(...),
+    question: str = Body(...),
+    evaluation_criteria: str = Body(...)
+):
+    try:
+        import httpx
+        from app.repositories.settings_repository import SettingsRepository
+        from app.utils.encryption import decrypt_password
+        
+        settings_repo = SettingsRepository()
+        ai_config = await settings_repo.get_ai_config()
+        
+        config_payload = {}
+        if ai_config:
+            decrypted_key = decrypt_password(ai_config.api_key) if ai_config.api_key else ""
+            config_payload = {
+                "provider": ai_config.provider,
+                "model_name": ai_config.model_name,
+                "api_key": decrypted_key,
+                "base_url": ai_config.base_url
+            }
+
+        ai_parser_base = settings.AI_PARSER_URL.replace("/api/upload", "")
+        generate_url = f"{ai_parser_base}/api/evaluate-answer"
+        
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            payload = {
+                "transcript": transcript,
+                "expected_answer": expected_answer,
+                "question": question,
+                "evaluation_criteria": evaluation_criteria,
+                "ai_config": config_payload
+            }
+            response = await client.post(generate_url, json=payload)
+            response.raise_for_status()
+            ai_result = response.json()
+            
+        if ai_result.get("status") == "success":
+            return {"status": "success", "data": ai_result.get("data", {})}
+        else:
+            raise ValueError("AI Parser failed to evaluate answer.")
+            
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An error occurred during evaluation: {str(e)}"
         )

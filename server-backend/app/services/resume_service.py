@@ -986,3 +986,64 @@ class ResumeService:
 
             stream = io.BytesIO(csv_buffer.getvalue().encode("utf-8-sig"))
             return stream, "candidate_database_export.csv", "text/csv"
+
+    async def generate_interview_questions(self, resume_id: str, user_id: str, round_skills: list = None, round_categories: list = None, existing_questions: str = None, is_admin: bool = False) -> Dict[str, Any]:
+        """Call AI parser to generate interview questions for a candidate."""
+        resume = await self.resume_repo.get_by_id(resume_id)
+        if not resume:
+            raise NotFoundError("Resume not found.")
+        
+        if not is_admin and resume.get("user_id") != user_id and resume.get("uploaded_by_user_id") != user_id:
+            raise PermissionError("You do not have permission to access this resume.")
+
+        parsed_data = resume.get("parsed_data", {})
+        if not parsed_data:
+            raise ValueError("Candidate has no parsed data available for question generation.")
+
+        if round_skills:
+            parsed_data["round_specific_skills_to_assess"] = round_skills
+            
+        if round_categories:
+            parsed_data["round_specific_categories_to_assess"] = round_categories
+
+        try:
+            import httpx
+            import json
+            from app.repositories.settings_repository import SettingsRepository
+            from app.utils.encryption import decrypt_password
+            
+            settings_repo = SettingsRepository()
+            ai_config = await settings_repo.get_ai_config()
+            
+            config_payload = {}
+            if ai_config:
+                decrypted_key = decrypt_password(ai_config.api_key) if ai_config.api_key else ""
+                config_payload = {
+                    "provider": ai_config.provider,
+                    "model_name": ai_config.model_name,
+                    "api_key": decrypted_key,
+                    "base_url": ai_config.base_url
+                }
+
+            # Derive AI Parser URL base from the upload URL
+            ai_parser_base = settings.AI_PARSER_URL.replace("/api/upload", "")
+            generate_url = f"{ai_parser_base}/api/generate-questions"
+            
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                payload = {
+                    "parsed_data": parsed_data,
+                    "ai_config": config_payload,
+                    "existing_questions": existing_questions
+                }
+                response = await client.post(generate_url, json=payload)
+                response.raise_for_status()
+                ai_result = response.json()
+                
+            if ai_result.get("status") == "success":
+                return ai_result.get("data", {})
+            else:
+                raise ValueError("AI Parser failed to generate questions.")
+                
+        except Exception as e:
+            logger.error(f"Error generating interview questions for {resume_id}: {e}")
+            raise ValueError(f"Failed to generate questions: {str(e)}")

@@ -5471,9 +5471,7 @@ export default function InterviewManagement() {
                       })()}
                     </div>
                   </div>
-
                 </div>
-
               </div>
             </form>
           </div>

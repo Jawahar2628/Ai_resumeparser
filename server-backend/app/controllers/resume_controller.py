@@ -212,3 +212,10 @@ class ResumeController:
             headers={"Content-Disposition": f'attachment; filename="{filename}"'},
         )
 
+    async def generate_interview_questions(self, resume_id: str, user_id: str, round_skills: list = None, round_categories: list = None, existing_questions: str = None, is_admin: bool = False) -> JSONResponse:
+        """Process request to generate interview questions using ai-parser."""
+        questions = await self.resume_service.generate_interview_questions(resume_id, user_id, round_skills=round_skills, round_categories=round_categories, existing_questions=existing_questions, is_admin=is_admin)
+        return success_response(
+            data=questions,
+            message="Interview questions generated successfully.",
+        )

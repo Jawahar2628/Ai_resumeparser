@@ -3,7 +3,8 @@ Resume processing routes for uploading PDF/DOC/DOCX files, listing resumes, text
 """
 
 from typing import Optional
-from fastapi import APIRouter, Depends, File, Query, UploadFile, status, BackgroundTasks
+from fastapi import APIRouter, Depends, File, Query, UploadFile, status, BackgroundTasks, Body
+from pydantic import BaseModel
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from app.controllers.resume_controller import ResumeController
 from app.core.database import get_database
@@ -284,3 +285,24 @@ async def get_resume_logs(
 ):
     is_admin = is_admin_or_staff(current_user)
     return await controller.get_resume_logs(resume_id, current_user["id"], is_admin=is_admin)
+
+class GenerateQuestionsReq(BaseModel):
+    round_skills: Optional[list[str]] = None
+    round_categories: Optional[list[str]] = None
+    existing_questions: Optional[str] = None
+
+@router.post(
+    "/{resume_id}/generate-questions",
+    status_code=status.HTTP_200_OK,
+    summary="Generate Interview Questions",
+    description="Generate Technical, Behavioral, and Domain questions using AI based on resume data."
+)
+async def generate_interview_questions(
+    resume_id: str,
+    request: GenerateQuestionsReq = Body(default_factory=GenerateQuestionsReq),
+    current_user: dict = Depends(get_current_active_user),
+    controller: ResumeController = Depends(get_resume_controller),
+):
+    is_admin = is_admin_or_staff(current_user)
+    return await controller.generate_interview_questions(resume_id, current_user["id"], round_skills=request.round_skills, round_categories=request.round_categories, existing_questions=request.existing_questions, is_admin=is_admin)
+

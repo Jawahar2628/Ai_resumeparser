@@ -15,6 +15,20 @@ load_dotenv()
 
 from graph import app_graph
 from database import get_db, CandidateDB
+from pydantic import BaseModel
+from typing import Dict, Any, Optional
+
+class GenerateQuestionsRequest(BaseModel):
+    parsed_data: Dict[str, Any]
+    ai_config: Optional[Dict[str, Any]] = None
+    existing_questions: Optional[str] = None
+
+class EvaluateAnswerRequest(BaseModel):
+    transcript: str
+    expected_answer: str
+    question: str
+    evaluation_criteria: str
+    ai_config: Optional[Dict[str, Any]] = None
 
 app = FastAPI(title="AI Resume Parser Service (Async)")
 
@@ -143,3 +157,89 @@ async def get_status(job_id: int, db: Session = Depends(get_db)):
         "parsed_resume": candidate.parsed_resume,
         "evaluation": candidate.evaluation
     }
+
+@app.post("/api/generate-questions")
+async def generate_questions(request: GenerateQuestionsRequest):
+    try:
+        from graph import get_llm
+        from langchain_core.prompts import ChatPromptTemplate
+        import json
+        
+        llm = get_llm(request.ai_config)
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", "You are an expert interviewer. Generate interview questions specifically for this shortlisted candidate.\n\n"
+                       "IMPORTANT: The questions must be crisp and concise. The expected answers must also be crisp and provided in concise bullet points. "
+                       "Additionally, ensure the questions consider and assess the candidate's general interview skills and communication ability.\n"
+                       "If 'round_specific_skills_to_assess' or 'round_specific_categories_to_assess' are provided in the candidate data, prioritize generating technical, behavioral, and domain questions that exactly assess those required skills and weighted categories for this interview round.\n\n"
+                       "If 'existing_questions' is provided by the user, DO NOT repeat or generate similar questions to the ones listed there. You MUST generate entirely NEW questions.\n\n"
+                       "You must output JSON with the following structure:\n"
+                       "{{\n"
+                       "  \"technical\": [{{ \"question\": \"...\", \"expectedAnswer\": \"...\", \"evaluationCriteria\": \"...\" }}],\n"
+                       "  \"behavioral\": [{{ \"question\": \"...\", \"expectedAnswer\": \"...\", \"evaluationCriteria\": \"...\" }}],\n"
+                       "  \"domain\": [{{ \"question\": \"...\", \"expectedAnswer\": \"...\", \"evaluationCriteria\": \"...\" }}]\n"
+                       "}}\n\n"
+                       "Return ONLY valid JSON matching this structure without Markdown blocks."),
+            ("user", "Candidate Resume Data:\n{parsed_data}\n\nExisting Questions to avoid:\n{existing_questions}")
+        ])
+        
+        prompt_val = prompt.invoke({
+            "parsed_data": json.dumps(request.parsed_data),
+            "existing_questions": request.existing_questions or "None"
+        })
+        ai_msg = llm.invoke(prompt_val)
+        
+        response_content = ai_msg.content
+        if response_content.startswith("```json"):
+            response_content = response_content.replace("```json", "", 1).replace("```", "").strip()
+        elif response_content.startswith("```"):
+            response_content = response_content.replace("```", "", 2).strip()
+            
+        questions_json = json.loads(response_content)
+        return {"status": "success", "data": questions_json}
+    except Exception as e:
+        logger.error(f"Error generating questions: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/evaluate-answer")
+async def evaluate_answer(request: EvaluateAnswerRequest):
+    try:
+        from graph import get_llm
+        from langchain_core.prompts import ChatPromptTemplate
+        import json
+        
+        llm = get_llm(request.ai_config)
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", "You are an expert interviewer evaluating a candidate's verbal response.\n\n"
+                       "You will be given the original question, the expected answer, the evaluation criteria, and the actual transcript of the candidate's answer.\n"
+                       "Your job is to compare the transcript to the expected answer and criteria.\n"
+                       "You must output JSON with the following structure:\n"
+                       "{{\n"
+                       "  \"score\": 0-100,\n"
+                       "  \"feedback\": \"detailed feedback explaining what they did well and what they missed based on the expected answer\",\n"
+                       "  \"is_match\": true/false (true if score > 60)\n"
+                       "}}\n\n"
+                       "Return ONLY valid JSON matching this structure without Markdown blocks."),
+            ("user", "Question: {question}\n\nExpected Answer: {expected_answer}\n\nCriteria: {criteria}\n\nCandidate Transcript:\n{transcript}")
+        ])
+        
+        prompt_val = prompt.invoke({
+            "question": request.question,
+            "expected_answer": request.expected_answer,
+            "criteria": request.evaluation_criteria,
+            "transcript": request.transcript
+        })
+        ai_msg = llm.invoke(prompt_val)
+        
+        response_content = ai_msg.content
+        if response_content.startswith("```json"):
+            response_content = response_content.replace("```json", "", 1).replace("```", "").strip()
+        elif response_content.startswith("```"):
+            response_content = response_content.replace("```", "", 2).strip()
+            
+        evaluation_json = json.loads(response_content)
+        return {"status": "success", "data": evaluation_json}
+    except Exception as e:
+        logger.error(f"Error evaluating answer: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+

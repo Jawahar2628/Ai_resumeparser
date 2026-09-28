@@ -2,10 +2,11 @@ import React, { useEffect, useState } from "react";
 import {
   X, UserCheck, Calendar, MapPin, ShieldCheck, DollarSign,
   TrendingUp, FileText, Building2, Layers, RefreshCw, AlertCircle, Video, Users,
-  Eye
+  Eye, Brain
 } from "lucide-react";
 import { getCandidateInterviewHistory, type InterviewItem, type InterviewerItem, type ClientFeedbackItem } from "../utils/Api";
 import { SkillRatingsEvaluation } from "./SkillRatingsEvaluation";
+import { InterviewQuestionsPanel } from "./InterviewQuestionsPanel";
 
 interface CandidateDetailsModalProps {
   isOpen: boolean;
@@ -25,6 +26,7 @@ export const CandidateDetailsModal: React.FC<CandidateDetailsModalProps> = ({
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [historyData, setHistoryData] = useState<any>(null);
+  const [showQuestionsForRound, setShowQuestionsForRound] = useState<number | null>(null);
 
   useEffect(() => {
     if (isOpen && candidateId) {
@@ -342,6 +344,18 @@ export const CandidateDetailsModal: React.FC<CandidateDetailsModalProps> = ({
                               <span>Join Meeting</span>
                             </a>
                           )}
+                          
+                          <button
+                            onClick={() => setShowQuestionsForRound(showQuestionsForRound === round.round_number ? null : round.round_number)}
+                            className={`inline-flex items-center gap-1 border text-xs px-3 py-1 rounded-xl font-bold transition-all cursor-pointer ${
+                              showQuestionsForRound === round.round_number
+                                ? "bg-violet-600 border-violet-700 text-white"
+                                : "bg-violet-50 hover:bg-violet-100 border-violet-200 text-violet-700"
+                            }`}
+                          >
+                            <Brain size={13} />
+                            <span>AI Prep & Questions</span>
+                          </button>
 
                           <span className={`px-2.5 py-1 rounded-md text-[11px] font-bold border ${
                             round.status === "COMPLETED"
@@ -352,6 +366,21 @@ export const CandidateDetailsModal: React.FC<CandidateDetailsModalProps> = ({
                           </span>
                         </div>
                       </div>
+
+                      {/* AI INTERVIEW QUESTIONS & VIDEO EVALUATION PANEL */}
+                      {showQuestionsForRound === round.round_number && candidateId && (() => {
+                        const roundSkillsForAI = (round.skill_ratings && round.skill_ratings.length > 0)
+                          ? round.skill_ratings
+                          : (round.interviewers && round.interviewers[0]?.skill_ratings) || [];
+                        const roundCategoriesForAI = (round.category_scores && round.category_scores.length > 0)
+                          ? round.category_scores
+                          : (round.interviewers && round.interviewers[0]?.category_scores) || [];
+                        return (
+                          <div className="mt-4 pt-4 border-t border-slate-200/60 animate-in fade-in slide-in-from-top-2 duration-300">
+                             <InterviewQuestionsPanel candidateId={candidateId} roundSkills={roundSkillsForAI} roundCategories={roundCategoriesForAI} />
+                          </div>
+                        );
+                      })()}
 
                       {/* DYNAMIC TECH & SOFT SKILL EVALUATION & CATEGORY WEIGHTED EVALUATION */}
                       {(() => {

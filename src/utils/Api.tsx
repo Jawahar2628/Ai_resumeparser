@@ -1,4 +1,4 @@
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api/v1";
+export const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api/v1";
 
 export const RESUME_UPLOAD = `${BASE_URL}/resumes/upload`;
 export const RESUME_LIST = `${BASE_URL}/resumes`;
@@ -7,6 +7,7 @@ export const RESUME_SUMMARY = `${BASE_URL}/resumes/parsed-summary`;
 export const RESUME_MERGE = (id: string) => `${BASE_URL}/resumes/${id}/merge`;
 export const RESUME_DOCUMENTS = (id: string) => `${BASE_URL}/resumes/${id}/documents`;
 export const RESUME_LOGS = (id: string) => `${BASE_URL}/resumes/${id}/logs`;
+export const RESUME_GENERATE_QUESTIONS = (id: string) => `${BASE_URL}/resumes/${id}/generate-questions`;
 export const INTERVIEWS_URL = `${BASE_URL}/interviews`;
 export const INTERVIEW_FEEDBACK_QUESTIONS_URL = `${BASE_URL}/interviews/feedback-questions`;
 
@@ -183,6 +184,27 @@ export interface PaginatedResumesResponse {
   total_pages: number;
   resumes: any[];
 }
+
+export const generateInterviewQuestions = async (resumeId: string, roundSkills?: string[], roundCategories?: string[], existingQuestions?: string): Promise<any> => {
+  const token = localStorage.getItem("access_token");
+  const response = await fetch(RESUME_GENERATE_QUESTIONS(resumeId), {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ round_skills: roundSkills, round_categories: roundCategories, existing_questions: existingQuestions }),
+  });
+
+  const resData = await response.json();
+  handleAuthError(response, resData);
+
+  if (!response.ok) {
+    throw new Error(resData.detail || resData.message || "Failed to generate interview questions");
+  }
+
+  return resData.data;
+};
 
 export const getResumes = async (params: CandidateQueryParams | number = 1, limitParam: number = 10): Promise<PaginatedResumesResponse> => {
   const token = localStorage.getItem("access_token") || "";
