@@ -282,7 +282,7 @@ export default function Dashboard() {
                     <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }}></span>
                     <span className="font-semibold text-slate-700">{item.name}</span>
                   </div>
-                  <span className="text-slate-500 font-medium">{item.percentage} ({item.count})</span>
+                  <span className="text-slate-500 font-medium">{item.count}</span>
                 </div>
               ))}
             </div>
