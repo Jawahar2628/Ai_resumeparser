@@ -40,7 +40,7 @@ export function InterviewQuestionsPanel({ candidateId, roundSkills, roundCategor
       }
       
       const data = await generateInterviewQuestions(candidateId, skillsList, categoriesList, existingQuestionsText);
-      setInterviewQuestions(prev => {
+      setInterviewQuestions((prev: any) => {
         if (!prev) return data;
         return {
           technical: [...(prev.technical || []), ...(data.technical || [])],
